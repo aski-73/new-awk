@@ -240,6 +240,7 @@ void primaryExpression() : {}
 
 void primarySuffix() : {} {
     ["." <Ident>] arguments() // .length(), toDouble() etc.
+    | ("[" expr() "]")+ // Array Zugriff
 }
 
 
