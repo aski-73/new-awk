@@ -1,3 +1,5 @@
+import ast.Node;
+
 public class Array extends Node {
     public int length;
     public int dimensions;

@@ -1,3 +1,5 @@
+import ast.Node;
+
 public class BinaryOperator extends Node {
     Node left, right;
     Token operator;

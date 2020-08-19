@@ -1,11 +1,11 @@
 options {
     STATIC = false;
-    DEBUG_PARSER = true;
-    DEBUG_LOOKAHEAD = true;
+//    DEBUG_PARSER = true;
+//    DEBUG_LOOKAHEAD = true;
 }
 
 PARSER_BEGIN(NawkParser)
-import java.io.File;import java.io.FileReader;
+import ast.SymbolTable; import ast.Node; import ast.Variable; import java.io.File;import java.io.FileReader;
 
 public class NawkParser {
     public static void main(String[] args) {
@@ -59,13 +59,18 @@ TOKEN : {
     | <SEMICOLON: ";">
     | <COMMA: ",">
     // TYPES
-    | "double" | "int" | "print" | "string" | "boolean" | "char"
+    | <DOUBLE: "double">
+    | <INTEGER: "int">
+    | <STRING: "string">
+    | <BOOLEAN: "boolean">
+    | <CHAR: "char">
     // OTHER
     | <VOID: "void">
     | <TRUE: "true">
     | <FALSE: "false">
     | <RETURN: "return">
     | <DOT: ".">
+    | <PRINT: "print">
     // LITERALS (Values)
     | <INTEGER_LITERAL : "0" | ["1" - "9"] (["0" - "9"])*>
     | <DOUBLE_LITERAL : <INTEGER_LITERAL> "." (["0" - "9"])*>
@@ -92,7 +97,7 @@ void start() : {
 void prog() : {
     SymbolTable globalSt = new SymbolTable(null);
 } {
-    // Needs Lookahead so that a fieldDeclaration and functionDeclaration can be differentiated
+    // Needs Lookahead so that a variableDeclaration and functionDeclaration can be differentiated
     ( LOOKAHEAD(3) statement(globalSt) | functionDeclaration())*
 }
 
@@ -100,7 +105,7 @@ void prog() : {
 
 void statement(SymbolTable st) : {
 } {
-    fieldDeclaration(st)
+    variableDeclaration(st)
     | blockStatement(st)
     | exprStatement(st)
     | emptyStatement()
@@ -109,7 +114,7 @@ void statement(SymbolTable st) : {
 void blockStatement(SymbolTable parentSt) : {
         SymbolTable st = new SymbolTable(parentSt);
 } {
-    "{"  blockStatementContent(st) "}"
+    "{" blockStatementContent(st) "}"
 }
 
 // Workaround, da (..)* in blockStatement nicht stehen kann, ohne dass
@@ -121,7 +126,7 @@ void blockStatementContent(SymbolTable st) : {
 
 void exprStatement(SymbolTable st) : {
 } {
-    expr() ";"
+    expr(st) ";"
 }
 void emptyStatement() : {
 } {
@@ -130,45 +135,51 @@ void emptyStatement() : {
 
 /** FIELD DECLARATION **/
 
-void type() :
-{}
+Token type() :
 {
-  primitiveType() ( "[" "]" )*
+    Token type;
+} {
+    type = primitiveType() ( "[" "]" )* {return type;}
 }
 
-void primitiveType() : {}
-{
-   "boolean"
-   | "char"
-   | "int"
-   | "double"
-   | "string"
+Token primitiveType() : {
+    Token t;
+} {
+   (t = "boolean"
+   | t = "char"
+   | t = "int"
+   | t = "double"
+   | t = "string") {return t;}
 }
 
-void fieldDeclaration(SymbolTable st) : {}
-{
-  type() variableDeclarator() ";"
+void variableDeclaration(SymbolTable st) : {
+    Token type;
+    Variable variable;
+} {
+  type = type() variable = variableDeclarator(st) {st.add(variable.identifier, type.image);} ";"
 }
 
-void variableDeclarator() : {}
-{
-  variableDeclaratorId() [ "=" variableInitializer() ]
+Variable variableDeclarator(SymbolTable st) : {
+    Token id;
+} {
+  id = variableDeclaratorId() [ "=" variableInitializer(st) ] {return new Variable(id.image, "");}
 }
 
-void variableDeclaratorId() : {}
-{
-  <Ident> ( "[" "]" )*
+Token variableDeclaratorId() : {
+    Token id;
+} {
+  id = <Ident> ( "[" "]" )* {return id;}
 }
 
-void variableInitializer() : {}
+void variableInitializer(SymbolTable st) : {}
 {
-  arrayInitializer()
-  | expr()
+  arrayInitializer(st)
+  | expr(st)
 }
 
-void arrayInitializer() : {}
+void arrayInitializer(SymbolTable st) : {}
 {
-  "{" [ variableInitializer() ("," variableInitializer())* ] "}"
+  "{" [ variableInitializer(st) ("," variableInitializer(st))* ] "}"
 }
 
 /** FUNCTION DECLARATION **/
@@ -177,93 +188,144 @@ void functionDeclaration() : {
     // No Parent table, because a function can not access outer scope
     SymbolTable st = new SymbolTable(null);
 } {
-    resultType() <Ident> "(" functionParameters() ")" functionBlock(st)
+    resultType() <Ident> "(" functionParameters(st) ")" functionBlock(st)
 }
 
 void resultType() : {} {
     "void" | type()
 }
 
-void functionParameters() : {} {
-    [ type() variableDeclarator() ("," type() variableDeclarator())*]
+void functionParameters(SymbolTable st) : {} {
+    [ type() variableDeclarator(st) ("," type() variableDeclarator(st))*]
 }
 
 void functionBlock(SymbolTable st) : {} {
-    "{" (statement(st))* ["return" expr() ";"] "}"
+    "{" (statement(st))* ["return" expr(st) ";"] "}"
 }
 
 /** EXPRESSIONS **/
 
-void expr(): {} {
-    conditionalOrExpression()
+String expr(SymbolTable st): {
+    String left, right = null;
+    Token op = null;
+ } {
+    // define variable assignment in expression rule, since expr can evaluate to an identifier
+    left = conditionalOrExpression(st) [<ASSIGN> right = expr(st) ] {
+        return validateTypes(left, right, op);
+    }
 }
 
-void conditionalOrExpression() : {}
-{
-    conditionalAndExpression() ( "||" conditionalAndExpression() )*
+String conditionalOrExpression(SymbolTable st) : {
+     String left, right = null;
+     Token op = null;
+ } {
+    left = conditionalAndExpression(st) ( "||" right = conditionalAndExpression(st) )* {
+        return validateTypes(left, right, op);
+    }
 }
 
-void conditionalAndExpression() : {}
-{
-    equalityExpression() ( "&&" equalityExpression() )*
+String conditionalAndExpression(SymbolTable st) : {
+     String left, right = null;
+     Token op = null;
+ } {
+    left = equalityExpression(st) ( "&&" right = equalityExpression(st) )* {
+        return validateTypes(left, right, op);
+    }
 }
 
-void equalityExpression() : {}
-{
-    relationalExpression() ( ( "==" | "!=" ) relationalExpression() )*
+String equalityExpression(SymbolTable st) : {
+     String left, right = null;
+     Token op = null;
+ } {
+    left = relationalExpression(st) ( ( "==" | "!=" ) right = relationalExpression(st) )* {
+        return validateTypes(left, right, op);
+    }
 }
 
-void relationalExpression() : {}
-{
-    additiveExpression() ( ( "<" | ">" | "<=" | ">=" ) additiveExpression() )*
+String relationalExpression(SymbolTable st) : {
+     String left, right = null;
+     Token op = null;
+ } {
+    left = additiveExpression(st) ( ( "<" | ">" | "<=" | ">=" ) right = additiveExpression(st) )* {
+        return validateTypes(left, right, op);
+    }
 }
 
-void additiveExpression() : {}
-{
-    multiplicativeExpression() ( ( "+" | "-" ) multiplicativeExpression() )*
+String additiveExpression(SymbolTable st) : {
+     String left, right = null;
+     Token op = null;
+ } {
+    left = multiplicativeExpression(st) ( ( op = "+" | op = "-" ) right = multiplicativeExpression(st) )* {
+        return validateTypes(left, right, op);
+    }
 }
 
-void multiplicativeExpression() : {}
-{
-    unaryExpression() ( ( "*" | "/" | "%" ) unaryExpression() )*
+/**
+* Rules in multiplication:
+ OK:       Arithmetic with numeric values (int, double, char)
+
+* Not OK:   Arithmetic with non-numeric values (string, boolean)
+* @returns Type of the expression
+*/
+String multiplicativeExpression(SymbolTable st) : {
+    String left, right = null;
+    Token op = null;
+ } {
+    left = unaryExpression(st) ( ( op = "*" | op = "/" | op = "%" ) right = unaryExpression(st) )* {
+        return validateTypes(left, right, op);
+    }
 }
 
-void unaryExpression() : {}
-{
-    ["+" | "-" | "!"] primaryExpression()
+String unaryExpression(SymbolTable st) : {
+    Token t;
+    String type;
+ } {
+    [t = "+" | t = "-" | t = "!"] type = primaryExpression(st) {return type;}
 }
 
-void primaryExpression() : {}
-{
-    literal() [primarySuffix()]
+String primaryExpression(SymbolTable st) : {
+    String type;
+ } {
+    type = literal(st) [primarySuffix(st)] {return type;}
 }
 
-void primarySuffix() : {} {
-    ["." <Ident>] arguments() // .length(), toDouble() etc.
-    | ("[" expr() "]")+ // Array Zugriff
+void primarySuffix(SymbolTable st) : {} {
+    ["." <Ident>] arguments(st) // .length(), toDouble() etc.
+    | ("[" expr(st) "]")+ // Array Zugriff
 }
 
 
-void arguments() :
+void arguments(SymbolTable st) :
 {}
 {
-  "(" [ argumentList() ] ")"
+  "(" [ argumentList(st) ] ")"
 }
 
-void argumentList() :
+void argumentList(SymbolTable st) :
 {}
 {
-  variableInitializer() ( "," variableInitializer() )*
+  variableInitializer(st) ( "," variableInitializer(st) )*
 }
 
-void literal() : {}
-{
-    <INTEGER_LITERAL>
-    | <DOUBLE_LITERAL>
-    | <CHAR_LTIERAL>
-    | <STRING_LITERAL>
-    | booleanLiteral()
-    | <Ident>
+String literal(SymbolTable st) : {
+    Token id;
+    // User intended type for the variable
+    String type;
+} {
+    ( <INTEGER_LITERAL> { type = "int";}
+    | <DOUBLE_LITERAL>  { type = "double";}
+    | <CHAR_LTIERAL>    { type = "char";}
+    | <STRING_LITERAL>  { type = "string";}
+    | booleanLiteral()  { type = "boolean";}
+    | id = <Ident> {
+        if (st.find(id.image) == null)  {
+            System.out.printf("Variable '%s' is not defined yet.%n", id.image);
+            type = "error";
+        } else {
+            type = st.find(id.image);
+        }
+    }
+    | "(" type = expr(st)")") {return type;} // return type when one rule in the "()" is succefully applied
 }
 void booleanLiteral() : {}
 {
@@ -279,4 +341,38 @@ Node skipError(int kind) {
         t = getNextToken();
     } while (t.kind != kind);
     return null;
+}
+
+JAVACODE
+boolean isNumeric(String type) {
+    return type.equals("int") || type.equals("char") || type.equals("double");
+}
+
+JAVACODE
+String determineTypeBase(String t1, String t2) {
+    //   OP   # char   # int #  double
+    //  # # # # # # # # # # # # # # #
+    // char   # int      int    double
+    // int    # int      int    double
+    // double ä double  double  double
+    if (t1.equals("double") || t2.equals("double")) return "double";
+
+    return "int";
+}
+
+JAVACODE
+String validateTypes(String left, String right, Token op) {
+    if (right == null || op == null) // no point in type checking if no right expression exists
+        return left;
+
+    if (left.equals("error") || right.equals("error")) {
+        System.out.printf("Invalid Type detected. Check types '%s' and '%s'.%n", left, right);
+        return "error";
+    }
+    if (isNumeric(left) && isNumeric(right)) { // ok
+        return determineTypeBase(left, right);
+    } else { // numerics with non-numerics or string/boolean with string/boolean
+        System.out.printf("Bad operator '%s' between types '%s' and '%s'.%n", op.image, left, right);
+        return "error";
+    }
 }

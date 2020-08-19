@@ -41,6 +41,12 @@ public class NawkParserTest {
     }
 
     @Test
+    public void testSemantic() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("8_semantic_test.nawk"));
+        testSubject.start();
+    }
+
+    @Test
     public void testXString() {
 
     }

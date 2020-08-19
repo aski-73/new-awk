@@ -1,3 +1,5 @@
+import ast.Node;
+
 public class Atom extends Node {
     Token content;
 
