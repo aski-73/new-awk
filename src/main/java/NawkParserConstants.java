@@ -65,17 +65,19 @@ public interface NawkParserConstants {
   /** RegularExpression Id. */
   int RETURN = 34;
   /** RegularExpression Id. */
-  int INTEGER_LITERAL = 35;
+  int DOT = 35;
   /** RegularExpression Id. */
-  int DOUBLE_LITERAL = 36;
+  int INTEGER_LITERAL = 36;
   /** RegularExpression Id. */
-  int CHAR_LTIERAL = 37;
+  int DOUBLE_LITERAL = 37;
   /** RegularExpression Id. */
-  int Ident = 38;
+  int CHAR_LTIERAL = 38;
   /** RegularExpression Id. */
   int STRING_LITERAL = 39;
   /** RegularExpression Id. */
-  int anything = 42;
+  int Ident = 40;
+  /** RegularExpression Id. */
+  int anything = 43;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -117,11 +119,12 @@ public interface NawkParserConstants {
     "\"true\"",
     "\"false\"",
     "\"return\"",
+    "\".\"",
     "<INTEGER_LITERAL>",
     "<DOUBLE_LITERAL>",
     "<CHAR_LTIERAL>",
-    "<Ident>",
     "<STRING_LITERAL>",
+    "<Ident>",
     "\" \"",
     "\"\\t\"",
     "<anything>",

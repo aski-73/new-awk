@@ -7,3 +7,5 @@ boolean bo3 = !bo;
 5 + 4;
 string s = "Hallo dies ist ein String äüö AÄÜÖ +_/% .;:???";
 string s2 = s + " Concatenation";
+double converted = toDouble("3.14");
+string implicitConversion = 3.14;

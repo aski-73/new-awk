@@ -65,12 +65,13 @@ TOKEN : {
     | <TRUE: "true">
     | <FALSE: "false">
     | <RETURN: "return">
+    | <DOT: ".">
     // LITERALS (Values)
     | <INTEGER_LITERAL : "0" | ["1" - "9"] (["0" - "9"])*>
     | <DOUBLE_LITERAL : <INTEGER_LITERAL> "." (["0" - "9"])*>
     | <CHAR_LTIERAL : "'" (["a"-"z", "A"-"Z"]){1} "'">
-    | <Ident : ["a"-"z", "A"-"Z", "_"] (["a"-"z", "A"-"Z", "0"-"9", "_"])*>
     | <STRING_LITERAL : "\"" (~["\""])* "\""> // innerhalb Gänsefüßchen alles bis auf weitere Gänsefüßen matchen
+    | <Ident : ["a"-"z", "A"-"Z", "_"] (["a"-"z", "A"-"Z", "0"-"9", "_"])*>
 }
 
 // Ignore in syntax, lexer analysis
@@ -238,7 +239,7 @@ void primaryExpression() : {}
 }
 
 void primarySuffix() : {} {
-    "." <Ident> "(" arguments() ")" // .length()
+    ["." <Ident>] arguments() // .length(), toDouble() etc.
 }
 
 
