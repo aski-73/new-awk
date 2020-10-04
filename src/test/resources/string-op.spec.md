@@ -29,3 +29,11 @@
     }
     Output: {"text", "text", "text"}
 ```
+```
+    "01abc:;"@{
+        :Integer: { return this; }
+        ":" { return ; }
+        :char: { return this; }
+    }
+    Output {"0", "1", "a","b","c",";"}
+``

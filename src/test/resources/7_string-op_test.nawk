@@ -1,8 +1,10 @@
 "1 2 3 4 5"@{
     :Integer: {return this;}
-    !:Integer: {return;}
+    !:Integer: {}
+    :Integer:
 }
 
-"Text with pointless content"@{
-    :^T: {return this;}
+"01abc:;"@{
+    :Integer: {return this;}
+    :Char: {return this;}
 }

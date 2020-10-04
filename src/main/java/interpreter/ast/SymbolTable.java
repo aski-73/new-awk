@@ -1,8 +1,12 @@
-package ast;
+package interpreter.ast;
 
 import java.util.HashMap;
 
 public class SymbolTable {
+    /**
+     * Key: Identifier
+     * Value: Type
+     */
     public HashMap<String, String> table = new HashMap<>();
     public SymbolTable parent;
 

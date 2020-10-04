@@ -1,6 +1,8 @@
-import ast.Node;
+package interpreter;
 
-public class Array extends Node {
+import interpreter.ast.AstNode;
+
+public class Array {
     public int length;
     public int dimensions;
     public Object array;

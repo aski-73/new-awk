@@ -1,6 +1,8 @@
-import ast.Node;
+package interpreter;
 
-public class Atom extends Node {
+import interpreter.ast.AstNode;
+
+public class Atom  {
     Token content;
 
     public Atom(Token t) {

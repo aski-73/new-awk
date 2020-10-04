@@ -1,12 +1,33 @@
+import interpreter.ast.AstNode;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import interpreter.NawkParser;
+import interpreter.ParseException;
+
+import java.util.List;
 
 public class NawkParserTest {
     private NawkParser testSubject;
 
     @Test
-    public void testDeclarations() throws ParseException {
+    public void parseDeclarationsWithValidDeclarations() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("1_declaration_test.nawk"));
-        testSubject.start();
+        List<AstNode> nodes = testSubject.start();
+        Assertions.assertThat(nodes.size()).isEqualTo(6);
+    }
+
+    @Test
+    public void parseDeclarationsReturnsSemanticErrors() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("1a_declaration_test.nawk"));
+        List<AstNode> nodes = testSubject.start();
+        Assertions.assertThat(nodes.size()).isEqualTo(6);
+        // variable 'do' already defined
+        Assertions.assertThat(nodes.get(1).errors.size()).isEqualTo(1);
+        // int can not contain a string
+        Assertions.assertThat(nodes.get(2).errors.size()).isEqualTo(1);
+        // implicit string conversion
+        Assertions.assertThat(nodes.get(3).run()).isEqualTo("5");
+        //
     }
 
     @Test
@@ -41,13 +62,14 @@ public class NawkParserTest {
     }
 
     @Test
-    public void testSemantic() throws ParseException {
-        testSubject = new NawkParser(this.getClass().getResourceAsStream("8_semantic_test.nawk"));
+    public void testStringOp() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("7_string-op_test.nawk"));
         testSubject.start();
     }
 
     @Test
-    public void testXString() {
-
+    public void testSemantic() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("8_semantic_test.nawk"));
+        testSubject.start();
     }
 }
