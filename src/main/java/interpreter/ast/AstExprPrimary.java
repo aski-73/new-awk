@@ -11,16 +11,15 @@ public class AstExprPrimary extends AstExpr {
     public AstExpr suffix;
 
     public AstExprPrimary(AstExpr literal, AstExpr suffix) {
-        super(literal.start, literal.end);
+        super(literal.start, literal.end, literal.type);
         this.literal = literal;
         this.suffix = suffix;
     }
 
     @Override
     public Value run() {
-        if (suffix != null) { // Array
-            // TODO
-            return null;
+        if (suffix != null) { // Array or function call
+           return suffix.run();
         } else {
             return literal.run();
         }

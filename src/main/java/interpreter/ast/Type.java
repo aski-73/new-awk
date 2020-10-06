@@ -1,11 +1,16 @@
 package interpreter.ast;
 
+/**
+ * Every type can be implicitly converted into a string.
+ * An enum value has an ordinal value. If ones ordinal value is lower than that of a string
+ * it will be converted into a string if a conversion is needed
+ */
 public enum Type {
+    BOOLEAN("boolean"),
+    CHAR("char"),
     INT("int"),
     DOUBLE("double"),
-    CHAR("char"),
     STRING("string"),
-    BOOLEAN("boolean"),
     ERROR("error"),
     VOID("void");
 

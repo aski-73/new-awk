@@ -6,8 +6,14 @@ public class ValueChar extends Value {
     }
 
     @Override
-    public Value copy(Value v) {
-        return null;
+    public Character copy() {
+        // primitive type. no reference
+        return (char) value;
+    }
+
+    @Override
+    public Value selfCopy() {
+        return new ValueChar(copy());
     }
 
     @Override
@@ -23,11 +29,15 @@ public class ValueChar extends Value {
     @Override
     public void unaryMinus() {
         value = (Character) value *  -1;
-
     }
 
     @Override
     public void unaryPlus() {
+
+    }
+
+    @Override
+    public void unaryBang() {
 
     }
 }

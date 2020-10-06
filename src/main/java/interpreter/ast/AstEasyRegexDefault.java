@@ -6,7 +6,7 @@ public class AstEasyRegexDefault extends AstEasyRegex {
     }
 
     @Override
-    public Object run() {
+    public Value run() {
 //        if (astFunctionBlock.returnValue instanceof )
         return null;
     }

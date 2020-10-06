@@ -6,7 +6,7 @@ public class AstEasyChar extends AstEasyRegex {
     }
 
     @Override
-    public Object run() {
+    public Value run() {
         return null;
     }
 }

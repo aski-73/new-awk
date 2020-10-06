@@ -28,9 +28,13 @@ public class AstExprEquality extends AstExpr {
         Value left = this.left.run();
         Value right = this.right.run();
 
+        // equality expr has always a boolean type after running
+        type = Type.BOOLEAN;
+
+        // to keep it simple types are compared as strings, since it is possible to compare implicit types
         if (op.image.equals("=="))
-            return new ValueBoolean(left.equals(right));
+            return new ValueBoolean(left.value.toString().equals(right.value.toString()));
         else
-            return new ValueBoolean(!left.equals(right));
+            return new ValueBoolean(!left.value.toString().equals(right.value.toString()));
     }
 }

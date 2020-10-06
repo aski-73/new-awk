@@ -21,7 +21,7 @@ public abstract class AstNode {
         this.end = end;
     }
 
-    public abstract Object run();
+    public abstract Value run();
 
     public void setStart(Token start) {
         this.start = start;

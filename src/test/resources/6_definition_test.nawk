@@ -1,6 +1,7 @@
 int a = 2 * 4;
-int b = b % 3;
+int b = 5 % 3;
 double c = 3.14 / 2.5;
+boolean bool = true;
 boolean bo = a > b;
 boolean bo2 = 10 <= 25;
 boolean bo3 = !bo;

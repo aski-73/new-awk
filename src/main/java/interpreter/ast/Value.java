@@ -1,18 +1,19 @@
 package interpreter.ast;
 
-public abstract class Value {
+public abstract class Value extends AstExpr {
     public Object value;
-    public Type type;
 
     public Value(Type type, Object value) {
+        // no need to save start and end token because the attributes type and value have all information
+        super(null, null, type);
         this.value = value;
-        this.type = type;
     }
 
     public static Value parseValue(Type type, String v) {
         switch (type) {
-            case INT:
             case CHAR:
+                return new ValueChar((char) Integer.parseInt(v));
+            case INT:
                 return new ValueInteger(Integer.parseInt(v));
             case DOUBLE:
                 return new ValueDouble(Double.parseDouble(v));
@@ -25,13 +26,24 @@ public abstract class Value {
 
     /**
      * Copy creates new Objects and not just a reference-copy
-     * @param v Value to copy
-     * @return copied values
+     * @return copied value
      */
-    public abstract  Value copy(Value v);
+    public abstract Object copy();
+
+    /**
+     * Copy creates a copy of it self
+     * @return copied value
+     */
+    public abstract Value selfCopy();
 
     public abstract void preIncrement();
     public abstract void preDecrement();
     public abstract void unaryMinus();
     public abstract void unaryPlus();
+    public abstract void unaryBang();
+
+    @Override
+    public Value run() {
+        return this;
+    }
 }

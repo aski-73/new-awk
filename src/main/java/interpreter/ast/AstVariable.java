@@ -3,9 +3,8 @@ package interpreter.ast;
 import interpreter.Token;
 
 public class AstVariable extends AstExpr {
-    public String identifier;
+    public Token identifier;
     public AstExpr value;
-    public Type type;
 
     // if this is an array this variable counts its dimensions
     public int dimensions;
@@ -17,7 +16,7 @@ public class AstVariable extends AstExpr {
         if (type != null)
             this.type = Type.parseType(type.image);
 
-        this.identifier = identifier.image;
+        this.identifier = identifier;
     }
 
     // INTERPRETER

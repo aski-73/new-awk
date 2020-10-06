@@ -1,6 +1,5 @@
 package interpreter.ast;
 
-import com.sun.jdi.IntegerValue;
 import interpreter.Token;
 import interpreter.errors.SemanticError;
 
@@ -9,8 +8,8 @@ import interpreter.errors.SemanticError;
  */
 public class AstExprAdditive extends AstExpr {
     public Token op;
-    AstExpr left;
-    AstExpr right;
+    public AstExpr left;
+    public AstExpr right;
 
     public AstExprAdditive(AstExpr left, AstExpr right, Token op, Type baseType) {
         super(left.start, right.end, baseType);

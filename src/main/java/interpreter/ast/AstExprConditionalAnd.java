@@ -29,6 +29,9 @@ public class AstExprConditionalAnd extends AstExpr {
         Value left = this.left.run();
         Value right = this.right.run();
 
+        // "OR" expr has always a boolean type after running
+        type = Type.BOOLEAN;
+
         return new ValueBoolean((Boolean) left.value && (Boolean) right.value);
     }
 }

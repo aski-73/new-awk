@@ -2,25 +2,22 @@ package interpreter.ast;
 
 import interpreter.Token;
 
-import java.util.List;
-
-public class AstFunctionDeclaration extends AstNode {
-    public Type returnType;
-    public String name;
-    public List<AstVariable> parameters;
+/**
+ * extends AstVariable since a function is something like a variable (has an identifier, can return a value)
+ */
+public class AstFunctionDeclaration extends AstVariable {
+    public SymbolTable st;
     public AstFunctionBlock astFunctionBlock;
 
-    public AstFunctionDeclaration(Token start, Token end, String name, List<AstVariable> parameters,
+    public AstFunctionDeclaration(Token start, Token end, Token identifier, SymbolTable st,
                                   AstFunctionBlock astFunctionBlock) {
-        super(start, end);
-        this.returnType = Type.parseType(start.image);
-        this.name = name;
-        this.parameters = parameters;
+        super(start, identifier, end);
+        this.st = st;
         this.astFunctionBlock = astFunctionBlock;
     }
 
     @Override
-    public Object run() {
+    public Value run() {
         return null;
     }
 }

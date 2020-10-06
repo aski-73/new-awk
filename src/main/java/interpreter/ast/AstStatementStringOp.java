@@ -21,7 +21,7 @@ public class AstStatementStringOp extends AstStatement {
     }
 
     @Override
-    public Object run() {
+    public Value run() {
         return null;
     }
 }

@@ -26,7 +26,7 @@ public class AstAssigment extends AstExpr {
         }
 
         AstVariable v = (AstVariable) left;
-        if (symbolTable.find(v.identifier) == null) {
+        if (symbolTable.find(v.identifier.image) == null) {
             errors.add(new SemanticError(String.format("variable '%s' is not defined;", v.identifier)));
             return null;
         }

@@ -7,13 +7,11 @@ import java.util.List;
 public class AstFunctionBlock extends AstNode {
     public List<AstStatement> statements;
     public AstExpr returnValue;
-    private SymbolTable symbolTable;
 
-    public AstFunctionBlock(Token start, Token end, List<AstStatement> statements, AstExpr returnValue, SymbolTable symbolTable) {
+    public AstFunctionBlock(Token start, Token end, List<AstStatement> statements, AstExpr returnValue) {
         super(start, end);
         this.statements = statements;
         this.returnValue = returnValue;
-        this.symbolTable = symbolTable;
     }
 
     @Override

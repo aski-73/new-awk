@@ -20,7 +20,7 @@ public class AstStatementIf extends AstStatement {
     // INTERPRETER
 
     @Override
-    public Object run() {
+    public Value run() {
         Value s = condition.run();
         // type of a condition should be a boolean
         if (s.value instanceof Boolean && (Boolean) s.value) {

@@ -7,7 +7,10 @@ public class AstExprUnary extends AstExpr {
     public AstExpr expr;
 
     public AstExprUnary(Token unaryOp, AstExpr expr) {
-        super(unaryOp, expr.end);
+        super(unaryOp, expr.end, expr.type);
+        if (unaryOp == null)
+            start = expr.start;
+
         this.unaryOp = unaryOp;
         this.expr = expr;
     }
@@ -16,24 +19,30 @@ public class AstExprUnary extends AstExpr {
 
     @Override
     public Value run() {
-        if (unaryOp == null)
-            return expr.run();
-
         Value v = expr.run();
+
+        // copy in order to keep original value behind the reference
+        Value copy = v.selfCopy();
+
+        if (unaryOp == null)
+            return copy;
+
         switch (unaryOp.image) {
             case "++":  // Pre increment
-                v.preIncrement();
+                copy.preIncrement();
                 break;
             case "--":  // Pre decrement
-                v.preDecrement();
+                copy.preDecrement();
                 break;
             case "+":  // basically does nothing
-                v.unaryPlus();
+                copy.unaryPlus();
                 break;
-            default:  // "-" => change sign on numeric values
-                v.unaryMinus();
+            case "-":  // "-" => change sign on numeric values
+                copy.unaryMinus();
                 break;
+            default: // ! (bang, negation)
+                copy.unaryBang();
         }
-        return v;
+        return copy;
     }
 }

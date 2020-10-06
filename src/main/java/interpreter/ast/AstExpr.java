@@ -1,10 +1,6 @@
 package interpreter.ast;
 
 import interpreter.Token;
-import interpreter.errors.CompilerError;
-
-import java.util.LinkedList;
-import java.util.List;
 
 public class AstExpr extends AstStatement {
     public Type type = Type.ERROR;

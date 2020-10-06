@@ -10,8 +10,8 @@ public class CompilerError extends Throwable {
         this.msg = msg;
     }
     public CompilerError(String msg, Token start, Token end) {
-        this.msg = msg;
         setToken(start,end);
+        this.msg = msg;
     }
     public void setToken(Token start, Token end) {
         this.start = start;

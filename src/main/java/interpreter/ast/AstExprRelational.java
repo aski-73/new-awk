@@ -8,8 +8,8 @@ import interpreter.errors.SemanticError;
  */
 public class AstExprRelational extends AstExpr {
     public Token op;
-    AstExpr left;
-    AstExpr right;
+    public AstExpr left;
+    public AstExpr right;
 
     public AstExprRelational(AstExpr left, AstExpr right, Token op, Type baseType) {
         super(left.start, right.end, baseType);
@@ -33,16 +33,19 @@ public class AstExprRelational extends AstExpr {
         Value left = this.left.run();
         Value right = this.right.run();
 
+        // relational expr has always a boolean type after running
+        type = Type.BOOLEAN;
+
         // interpret every numerical value as double to reduce if-statements
         switch (op.image) {
             case ">":
-                return new ValueBoolean((Double) left.value > (Double) right.value);
+                return new ValueBoolean(((Number) left.value).doubleValue() > ((Number) right.value).doubleValue());
             case "<":
-                return new ValueBoolean((Double) left.value < (Double) right.value);
+                return new ValueBoolean(((Number) left.value).doubleValue() < ((Number) right.value).doubleValue());
             case ">=":
-                return new ValueBoolean((Double) left.value >= (Double) right.value);
+                return new ValueBoolean(((Number) left.value).doubleValue() >= ((Number) right.value).doubleValue());
             default: // <=
-                return new ValueBoolean((Double) left.value <= (Double) right.value);
+                return new ValueBoolean(((Number) left.value).doubleValue() <= ((Number) right.value).doubleValue());
         }
     }
 }

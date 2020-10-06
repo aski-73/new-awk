@@ -10,6 +10,7 @@ public class AstLiteralChar extends AstExpr {
     }
 
     public Value run() {
-        return new ValueChar((char) Integer.parseInt(start.image));
+        // char is always just one character. An image contains therefore the chars, e.g 'A' => take the middle one
+        return new ValueChar(start.image.charAt(1));
     }
 }

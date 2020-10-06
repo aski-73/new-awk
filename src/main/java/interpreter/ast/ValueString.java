@@ -6,27 +6,32 @@ public class ValueString extends Value {
     }
 
     @Override
-    public Value copy(Value v) {
-        return null;
+    public String copy() {
+        return value + "";
     }
 
     @Override
     public void preIncrement() {
+    }
 
+    @Override
+    public Value selfCopy() {
+        return new ValueString(copy());
     }
 
     @Override
     public void preDecrement() {
-
     }
 
     @Override
     public void unaryMinus() {
-
     }
 
     @Override
     public void unaryPlus() {
+    }
 
+    @Override
+    public void unaryBang() {
     }
 }

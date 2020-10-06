@@ -1,0 +1,1 @@
+double d = toDouble("3.14");
