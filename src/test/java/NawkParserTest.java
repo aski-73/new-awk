@@ -107,6 +107,14 @@ public class NawkParserTest {
     @Test
     public void testSemantic() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("8_semantic_test.nawk"));
-        testSubject.start();
+        AstRoot root = testSubject.start();
+        root.run();
+    }
+
+    @Test
+    public void testPrintStatement() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("9_print_test.nawk"));
+        AstRoot root = testSubject.start();
+        root.run();
     }
 }

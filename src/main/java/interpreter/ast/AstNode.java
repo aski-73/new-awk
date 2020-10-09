@@ -16,6 +16,11 @@ public abstract class AstNode {
      */
     public List<CompilerError> errors = new LinkedList<>();
 
+    /**
+     * reference to symbol table because some values might change at runtime
+     */
+    public SymbolTable symbolTable;
+
     public AstNode(Token start, Token end) {
         this.start = start;
         this.end = end;
@@ -30,4 +35,6 @@ public abstract class AstNode {
     public void setEnd(Token end) {
         this.end = end;
     }
+
+    public abstract void checkSemantic(List<CompilerError> errors);
 }

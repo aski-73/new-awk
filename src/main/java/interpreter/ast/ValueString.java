@@ -34,4 +34,9 @@ public class ValueString extends Value {
     @Override
     public void unaryBang() {
     }
+
+    @Override
+    public String toString() {
+        return (String) value;
+    }
 }

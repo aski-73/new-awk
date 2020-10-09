@@ -35,4 +35,9 @@ public class ValueBoolean extends Value {
     public void unaryBang() {
         value = !(Boolean) value;
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(value);
+    }
 }

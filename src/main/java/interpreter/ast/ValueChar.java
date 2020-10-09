@@ -40,4 +40,9 @@ public class ValueChar extends Value {
     public void unaryBang() {
 
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(value);
+    }
 }

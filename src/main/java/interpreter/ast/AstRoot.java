@@ -21,6 +21,9 @@ public class AstRoot extends AstNode {
 
     @Override
     public Value run() {
-        return null;
+        for (AstNode tree: subtrees)
+            tree.run();
+
+        return new ValueBoolean(true);
     }
 }

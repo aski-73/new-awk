@@ -1,6 +1,9 @@
 package interpreter.ast;
 
 import interpreter.Token;
+import interpreter.errors.CompilerError;
+
+import java.util.List;
 
 public class AstExpr extends AstStatement {
     public Type type = Type.ERROR;
@@ -17,4 +20,7 @@ public class AstExpr extends AstStatement {
     public Value run() {
         return null;
     }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {    }
 }

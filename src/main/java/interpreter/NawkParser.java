@@ -64,6 +64,7 @@ public class NawkParser implements NawkParserConstants {
         case VOID:
         case TRUE:
         case FALSE:
+        case PRINT:
         case INTEGER_LITERAL:
         case DOUBLE_LITERAL:
         case CHAR_LTIERAL:
@@ -129,11 +130,14 @@ public class NawkParser implements NawkParserConstants {
           stmt = exprStatement(st);
         } else {
           switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+          case PRINT:
+            stmt = printStatement(st);
+            break;
           case SEMICOLON:
             stmt = emptyStatement();
             break;
           case STRING_LITERAL:
-            stmt = stringOpStatement(st);
+            stmt = stringOpStatement();
             break;
           default:
             jj_la1[3] = jj_gen;
@@ -146,6 +150,23 @@ public class NawkParser implements NawkParserConstants {
     throw new Error("Missing return statement in function");
     } finally {
       trace_return("statement");
+    }
+  }
+
+  final public AstStatement printStatement(SymbolTable st) throws ParseException {
+    trace_call("printStatement");
+    try {
+    AstExpr e;
+    Token t1, t2;
+      t1 = jj_consume_token(PRINT);
+      jj_consume_token(LPAREN);
+      e = arrayAndVariableInitializer(st);
+      jj_consume_token(RPAREN);
+      t2 = jj_consume_token(SEMICOLON);
+        {if (true) return new AstStatementPrint(t1, t2, e);}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("printStatement");
     }
   }
 
@@ -190,6 +211,7 @@ public class NawkParser implements NawkParserConstants {
         case CHAR:
         case TRUE:
         case FALSE:
+        case PRINT:
         case INTEGER_LITERAL:
         case DOUBLE_LITERAL:
         case CHAR_LTIERAL:
@@ -235,7 +257,7 @@ public class NawkParser implements NawkParserConstants {
     }
   }
 
-  final public AstStatementStringOp stringOpStatement(SymbolTable st) throws ParseException {
+  final public AstStatementStringOp stringOpStatement() throws ParseException {
     trace_call("stringOpStatement");
     try {
     List<AstEasyRegex> list = new LinkedList<AstEasyRegex>();
@@ -247,7 +269,6 @@ public class NawkParser implements NawkParserConstants {
       label_3:
       while (true) {
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-        case BANG:
         case DDOT:
           ;
           break;
@@ -255,51 +276,58 @@ public class NawkParser implements NawkParserConstants {
           jj_la1[5] = jj_gen;
           break label_3;
         }
-        a = stringOpEasyRegexStatement(st);
-                                                                        list.add(a);
+        a = stringOpEasyRegexStatement();
+                                                                      list.add(a);
       }
       t2 = jj_consume_token(RBRACE);
-    {if (true) return new AstStatementStringOp(t1, t2, t1.image, list);}
+        {if (true) return new AstStatementStringOp(t1, t2, t1.image, list);}
     throw new Error("Missing return statement in function");
     } finally {
       trace_return("stringOpStatement");
     }
   }
 
-  final public AstEasyRegex stringOpEasyRegexStatement(SymbolTable st) throws ParseException {
+  final public AstEasyRegex stringOpEasyRegexStatement() throws ParseException {
     trace_call("stringOpEasyRegexStatement");
     try {
-    Token bang;
+    SymbolTable st = new SymbolTable(null);
+    Token bang = null;
     Token regex;
     AstEasyRegex easyRegex = null;
     AstFunctionBlock block = null;
+      jj_consume_token(DDOT);
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case BANG:
-        jj_consume_token(BANG);
+        bang = jj_consume_token(BANG);
         break;
       default:
         jj_la1[6] = jj_gen;
         ;
       }
-      jj_consume_token(DDOT);
-      regex = jj_consume_token(Ident);
+      regex = jj_consume_token(STRING_LITERAL);
       jj_consume_token(DDOT);
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case LBRACE:
         block = functionBlock(st);
-        // "this" references the matched characters of the regex pattern
-        st.add("this", null); // TODO
-        if (regex.image.equals("Integer")) {
-            easyRegex = new AstEasyInteger(block);
-        } else if (regex.image.equals("Char")) {
-            easyRegex = new AstEasyChar(block);
-        }
         break;
       default:
         jj_la1[7] = jj_gen;
         ;
       }
-         {if (true) return easyRegex == null ? new AstEasyRegexDefault() : easyRegex;}
+        switch (regex.image.substring(1, regex.image.length() - 1)) {
+            case "Integer":
+                easyRegex = new AstEasyInteger(block);
+                break;
+            case "Char":
+                easyRegex = new AstEasyChar(block);
+                break;
+            default:
+                easyRegex = new AstEasyRegexCustom(regex.image, block);
+        }
+        if (bang != null)
+            easyRegex.isNegation = true;
+
+         {if (true) return easyRegex;}
     throw new Error("Missing return statement in function");
     } finally {
       trace_return("stringOpEasyRegexStatement");
@@ -667,6 +695,7 @@ public class NawkParser implements NawkParserConstants {
         case CHAR:
         case TRUE:
         case FALSE:
+        case PRINT:
         case INTEGER_LITERAL:
         case DOUBLE_LITERAL:
         case CHAR_LTIERAL:
@@ -692,7 +721,12 @@ public class NawkParser implements NawkParserConstants {
         ;
       }
       t2 = jj_consume_token(RBRACE);
-        {if (true) return new AstFunctionBlock(t1, t2, list, returnValue);}
+        AstFunctionBlock afb = new AstFunctionBlock(t1, t2, list, returnValue);
+        // give reference to symbol table so that identifiers can be evaluated at runtime. Most needed for the
+        // string-operator because the "this" values is evaluated at runtime
+        afb.symbolTable = st;
+
+        {if (true) return afb;}
     throw new Error("Missing return statement in function");
     } finally {
       trace_return("functionBlock");
@@ -1113,19 +1147,21 @@ public class NawkParser implements NawkParserConstants {
         end = jj_consume_token(RPAREN);
                                                                                                                           // Function Call
         AstExprFunctionCall asf;
-        if (!(identifier instanceof AstVariable)) {
+        if (!(identifier instanceof AstLiteralIdent)) {
             asf = new AstExprFunctionCall(start, end, identifier.toString(), null, params);
             String msg = String.format("'%s' is not an function identifier", identifier.toString());
             asf.errors.add(new SemanticError(msg, start, end));
         } else {
-            String i =  ((AstVariable) identifier).identifier.image;
+            String i =  ((AstLiteralIdent) identifier).identifier.image;
             asf = new AstExprFunctionCall(start, end, i, null, params);
 
             if (st.find(i) instanceof AstFunctionDeclaration) {
                 asf.declaration = (AstFunctionDeclaration) st.find(i);
             } else {
-                String msg = String.format("function '%s' is not declared or a function", i);
-                asf.errors.add(new SemanticError(msg, start, end));
+                if (!Helper.isPredefined(i)) {
+                    String msg = String.format("function '%s' is not declared or a function", i);
+                    asf.errors.add(new SemanticError(msg, start, end));
+                }
             }
         }
         {if (true) return asf;}
@@ -1182,14 +1218,7 @@ public class NawkParser implements NawkParserConstants {
         break;
       case Ident:
         t = jj_consume_token(Ident);
-    literal = new AstVariable(t, t, t);
-    if (!isPredefined(t.image)) {
-        if (st.find(t.image) == null)  { // not set
-            literal.errors.add(new SemanticError(String.format("Variable '%s' is not defined yet.%n", t.image), t, t));
-        } else { // already declared. assign
-            literal = st.find(t.image);
-        }
-    }
+                    literal = new AstLiteralIdent(t, st);
         break;
       case LPAREN:
         jj_consume_token(LPAREN);
@@ -1335,7 +1364,8 @@ public class NawkParser implements NawkParserConstants {
             || functionName.equals("isDouble")
             || functionName.equals("isInt")
             || functionName.equals("isChar")
-            || functionName.equals("isBoolean");
+            || functionName.equals("isBoolean")
+            || functionName.equals("print");
     } finally {
       trace_return("isPredefined");
     }
@@ -1362,97 +1392,149 @@ public class NawkParser implements NawkParserConstants {
     finally { jj_save(2, xla); }
   }
 
-  private boolean jj_3R_39() {
-    if (jj_3R_42()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_43()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_37() {
+  private boolean jj_3R_36() {
     if (jj_3R_39()) return true;
     Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_40()) { jj_scanpos = xsp; break; }
-    }
+    xsp = jj_scanpos;
+    if (jj_3R_40()) jj_scanpos = xsp;
     return false;
   }
 
-  private boolean jj_3R_26() {
+  private boolean jj_3R_28() {
     if (jj_scan_token(STRING_LITERAL)) return true;
     if (jj_scan_token(AT)) return true;
     if (jj_scan_token(LBRACE)) return true;
     return false;
   }
 
-  private boolean jj_3R_25() {
-    if (jj_scan_token(SEMICOLON)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_34() {
-    if (jj_3R_37()) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_38()) jj_scanpos = xsp;
-    return false;
-  }
-
-  private boolean jj_3R_18() {
-    if (jj_3R_23()) return true;
-    if (jj_scan_token(SEMICOLON)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_41() {
+  private boolean jj_3R_43() {
     if (jj_scan_token(COMMA)) return true;
     return false;
   }
 
   private boolean jj_3R_27() {
+    if (jj_scan_token(SEMICOLON)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_18() {
+    if (jj_3R_24()) return true;
+    if (jj_scan_token(SEMICOLON)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_29() {
     if (jj_3R_16()) return true;
     return false;
   }
 
-  private boolean jj_3R_22() {
+  private boolean jj_3R_23() {
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_27()) { jj_scanpos = xsp; break; }
+      if (jj_3R_29()) { jj_scanpos = xsp; break; }
     }
     return false;
   }
 
   private boolean jj_3R_17() {
     if (jj_scan_token(LBRACE)) return true;
-    if (jj_3R_22()) return true;
+    if (jj_3R_23()) return true;
     if (jj_scan_token(RBRACE)) return true;
     return false;
   }
 
+  private boolean jj_3R_64() {
+    if (jj_scan_token(LPAREN)) return true;
+    if (jj_3R_36()) return true;
+    if (jj_scan_token(RPAREN)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_63() {
+    if (jj_scan_token(Ident)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_62() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(34)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(35)) return true;
+    }
+    return false;
+  }
+
+  private boolean jj_3R_61() {
+    if (jj_scan_token(STRING_LITERAL)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_26() {
+    if (jj_scan_token(PRINT)) return true;
+    if (jj_scan_token(LPAREN)) return true;
+    if (jj_3R_24()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_60() {
+    if (jj_scan_token(CHAR_LTIERAL)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_59() {
+    if (jj_scan_token(DOUBLE_LITERAL)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_58() {
+    if (jj_scan_token(INTEGER_LITERAL)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_56() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_58()) {
+    jj_scanpos = xsp;
+    if (jj_3R_59()) {
+    jj_scanpos = xsp;
+    if (jj_3R_60()) {
+    jj_scanpos = xsp;
+    if (jj_3R_61()) {
+    jj_scanpos = xsp;
+    if (jj_3R_62()) {
+    jj_scanpos = xsp;
+    if (jj_3R_63()) {
+    jj_scanpos = xsp;
+    if (jj_3R_64()) return true;
+    }
+    }
+    }
+    }
+    }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_22() {
+    if (jj_3R_28()) return true;
+    return false;
+  }
+
   private boolean jj_3R_21() {
-    if (jj_3R_26()) return true;
+    if (jj_3R_27()) return true;
     return false;
   }
 
   private boolean jj_3R_20() {
-    if (jj_3R_25()) return true;
+    if (jj_3R_26()) return true;
     return false;
   }
 
   private boolean jj_3_3() {
     if (jj_3R_18()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_62() {
-    if (jj_scan_token(LPAREN)) return true;
-    if (jj_3R_34()) return true;
-    if (jj_scan_token(RPAREN)) return true;
     return false;
   }
 
@@ -1462,7 +1544,7 @@ public class NawkParser implements NawkParserConstants {
   }
 
   private boolean jj_3R_19() {
-    if (jj_3R_24()) return true;
+    if (jj_3R_25()) return true;
     return false;
   }
 
@@ -1477,46 +1559,19 @@ public class NawkParser implements NawkParserConstants {
     jj_scanpos = xsp;
     if (jj_3R_20()) {
     jj_scanpos = xsp;
-    if (jj_3R_21()) return true;
-    }
-    }
-    }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_61() {
-    if (jj_scan_token(Ident)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_60() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(34)) {
+    if (jj_3R_21()) {
     jj_scanpos = xsp;
-    if (jj_scan_token(35)) return true;
+    if (jj_3R_22()) return true;
+    }
+    }
+    }
+    }
     }
     return false;
   }
 
-  private boolean jj_3R_59() {
-    if (jj_scan_token(STRING_LITERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_58() {
-    if (jj_scan_token(CHAR_LTIERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_57() {
-    if (jj_scan_token(DOUBLE_LITERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_56() {
-    if (jj_scan_token(INTEGER_LITERAL)) return true;
+  private boolean jj_3R_31() {
+    if (jj_3R_36()) return true;
     return false;
   }
 
@@ -1525,87 +1580,52 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
-  private boolean jj_3R_54() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_56()) {
-    jj_scanpos = xsp;
-    if (jj_3R_57()) {
-    jj_scanpos = xsp;
-    if (jj_3R_58()) {
-    jj_scanpos = xsp;
-    if (jj_3R_59()) {
-    jj_scanpos = xsp;
-    if (jj_3R_60()) {
-    jj_scanpos = xsp;
-    if (jj_3R_61()) {
-    jj_scanpos = xsp;
-    if (jj_3R_62()) return true;
-    }
-    }
-    }
-    }
-    }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_29() {
-    if (jj_3R_34()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_33() {
-    if (jj_3R_23()) return true;
+  private boolean jj_3R_35() {
+    if (jj_3R_24()) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_41()) { jj_scanpos = xsp; break; }
+      if (jj_3R_43()) { jj_scanpos = xsp; break; }
     }
     return false;
   }
 
-  private boolean jj_3R_65() {
+  private boolean jj_3R_67() {
     if (jj_scan_token(LPAREN)) return true;
-    if (jj_3R_23()) return true;
+    if (jj_3R_24()) return true;
     return false;
   }
 
-  private boolean jj_3R_28() {
+  private boolean jj_3R_68() {
+    if (jj_3R_36()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_30() {
     if (jj_scan_token(LBRACE)) return true;
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_33()) jj_scanpos = xsp;
+    if (jj_3R_35()) jj_scanpos = xsp;
     if (jj_scan_token(RBRACE)) return true;
     return false;
   }
 
-  private boolean jj_3R_66() {
-    if (jj_3R_34()) return true;
+  private boolean jj_3R_57() {
+    if (jj_3R_65()) return true;
     return false;
   }
 
-  private boolean jj_3R_23() {
+  private boolean jj_3R_24() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_28()) {
+    if (jj_3R_30()) {
     jj_scanpos = xsp;
-    if (jj_3R_29()) return true;
+    if (jj_3R_31()) return true;
     }
     return false;
   }
 
-  private boolean jj_3R_55() {
-    if (jj_3R_63()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_36() {
-    if (jj_scan_token(ASSIGN)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_51() {
+  private boolean jj_3R_53() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(6)) {
@@ -1615,57 +1635,54 @@ public class NawkParser implements NawkParserConstants {
     if (jj_scan_token(8)) return true;
     }
     }
-    if (jj_3R_50()) return true;
+    if (jj_3R_52()) return true;
     return false;
   }
 
-  private boolean jj_3R_63() {
+  private boolean jj_3R_65() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_64()) {
+    if (jj_3R_66()) {
     jj_scanpos = xsp;
-    if (jj_3R_65()) return true;
+    if (jj_3R_67()) return true;
     }
     return false;
   }
 
-  private boolean jj_3R_64() {
+  private boolean jj_3R_66() {
     if (jj_scan_token(LBRACKET)) return true;
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_66()) jj_scanpos = xsp;
+    if (jj_3R_68()) jj_scanpos = xsp;
     if (jj_scan_token(RBRACKET)) return true;
     return false;
   }
 
-  private boolean jj_3R_49() {
+  private boolean jj_3R_38() {
+    if (jj_scan_token(ASSIGN)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_51() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(2)) {
     jj_scanpos = xsp;
     if (jj_scan_token(4)) return true;
     }
-    if (jj_3R_48()) return true;
+    if (jj_3R_50()) return true;
     return false;
   }
 
-  private boolean jj_3R_53() {
-    if (jj_3R_54()) return true;
+  private boolean jj_3R_55() {
+    if (jj_3R_56()) return true;
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_55()) jj_scanpos = xsp;
+    if (jj_3R_57()) jj_scanpos = xsp;
     return false;
   }
 
-  private boolean jj_3R_32() {
-    if (jj_scan_token(Ident)) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_36()) jj_scanpos = xsp;
-    return false;
-  }
-
-  private boolean jj_3R_52() {
+  private boolean jj_3R_54() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(2)) {
@@ -1684,15 +1701,23 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
-  private boolean jj_3R_50() {
+  private boolean jj_3R_52() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_52()) jj_scanpos = xsp;
-    if (jj_3R_53()) return true;
+    if (jj_3R_54()) jj_scanpos = xsp;
+    if (jj_3R_55()) return true;
     return false;
   }
 
-  private boolean jj_3R_47() {
+  private boolean jj_3R_34() {
+    if (jj_scan_token(Ident)) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_38()) jj_scanpos = xsp;
+    return false;
+  }
+
+  private boolean jj_3R_49() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(13)) {
@@ -1705,7 +1730,34 @@ public class NawkParser implements NawkParserConstants {
     }
     }
     }
+    if (jj_3R_48()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_50() {
+    if (jj_3R_52()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_53()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_47() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(14)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(17)) return true;
+    }
     if (jj_3R_46()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_33() {
+    if (jj_scan_token(LBRACKET)) return true;
+    if (jj_scan_token(RBRACKET)) return true;
     return false;
   }
 
@@ -1719,66 +1771,39 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
-  private boolean jj_3R_31() {
-    if (jj_scan_token(LBRACKET)) return true;
-    if (jj_scan_token(RBRACKET)) return true;
+  private boolean jj_3R_45() {
+    if (jj_scan_token(AND)) return true;
+    if (jj_3R_44()) return true;
     return false;
   }
 
-  private boolean jj_3R_45() {
+  private boolean jj_3R_25() {
+    if (jj_3R_32()) return true;
     Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(14)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(17)) return true;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_33()) { jj_scanpos = xsp; break; }
     }
-    if (jj_3R_44()) return true;
+    if (jj_3R_34()) return true;
+    if (jj_scan_token(SEMICOLON)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_42() {
+    if (jj_scan_token(OR)) return true;
+    if (jj_3R_41()) return true;
     return false;
   }
 
   private boolean jj_3R_46() {
     if (jj_3R_48()) return true;
     Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_49()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_24() {
-    if (jj_3R_30()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_31()) { jj_scanpos = xsp; break; }
-    }
-    if (jj_3R_32()) return true;
-    if (jj_scan_token(SEMICOLON)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_43() {
-    if (jj_scan_token(AND)) return true;
-    if (jj_3R_42()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_40() {
-    if (jj_scan_token(OR)) return true;
-    if (jj_3R_39()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_44() {
-    if (jj_3R_46()) return true;
-    Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_47()) jj_scanpos = xsp;
+    if (jj_3R_49()) jj_scanpos = xsp;
     return false;
   }
 
-  private boolean jj_3R_35() {
+  private boolean jj_3R_37() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(31)) {
@@ -1797,23 +1822,43 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
-  private boolean jj_3R_30() {
-    if (jj_3R_35()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_38() {
+  private boolean jj_3R_40() {
     if (jj_scan_token(ASSIGN)) return true;
-    if (jj_3R_34()) return true;
+    if (jj_3R_36()) return true;
     return false;
   }
 
-  private boolean jj_3R_42() {
+  private boolean jj_3R_32() {
+    if (jj_3R_37()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_44() {
+    if (jj_3R_46()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_47()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_41() {
     if (jj_3R_44()) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
       if (jj_3R_45()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_39() {
+    if (jj_3R_41()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_42()) { jj_scanpos = xsp; break; }
     }
     return false;
   }
@@ -1837,10 +1882,10 @@ public class NawkParser implements NawkParserConstants {
       jj_la1_init_1();
    }
    private static void jj_la1_init_0() {
-      jj_la1_0 = new int[] {0xf450083c,0xf0000000,0xf0000000,0x4000000,0xf450083c,0x800,0x800,0x400000,0xf0000000,0x1000000,0x400,0x8000000,0x50083c,0x50083c,0x8000000,0xf0000000,0xf0000000,0x1000000,0xf450083c,0x0,0x400,0x40000,0x80000,0x24000,0x24000,0x1b000,0x1b000,0x14,0x14,0x1c0,0x1c0,0x83c,0x83c,0x1100000,0x10083c,0x1000000,0x8000000,0x1100000,0x0,0x100000,};
+      jj_la1_0 = new int[] {0xf450083c,0xf0000000,0xf0000000,0x4000000,0xf450083c,0x0,0x800,0x400000,0xf0000000,0x1000000,0x400,0x8000000,0x50083c,0x50083c,0x8000000,0xf0000000,0xf0000000,0x1000000,0xf450083c,0x0,0x400,0x40000,0x80000,0x24000,0x24000,0x1b000,0x1b000,0x14,0x14,0x1c0,0x1c0,0x83c,0x83c,0x1100000,0x10083c,0x1000000,0x8000000,0x1100000,0x0,0x100000,};
    }
    private static void jj_la1_init_1() {
-      jj_la1_1 = new int[] {0x1f0f,0x3,0x1,0x800,0x1f0d,0x40,0x0,0x0,0x1,0x0,0x0,0x0,0x1f0c,0x1f0c,0x0,0x1,0x3,0x0,0x1f0d,0x10,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1f0c,0x0,0x0,0x0,0xc,0x1f0c,};
+      jj_la1_1 = new int[] {0x1f8f,0x3,0x1,0x880,0x1f8d,0x40,0x0,0x0,0x1,0x0,0x0,0x0,0x1f0c,0x1f0c,0x0,0x1,0x3,0x0,0x1f8d,0x10,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1f0c,0x0,0x0,0x0,0xc,0x1f0c,};
    }
   final private JJCalls[] jj_2_rtns = new JJCalls[3];
   private boolean jj_rescan = false;
