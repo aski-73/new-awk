@@ -1,6 +1,9 @@
 package interpreter.ast;
 
 import interpreter.Token;
+import interpreter.errors.CompilerError;
+
+import java.util.List;
 
 public class AstStatementIf extends AstStatement {
     public AstExpr condition;
@@ -30,6 +33,11 @@ public class AstStatementIf extends AstStatement {
         }
 
         // Statements does not return values
-        return null;
+        return new ValueInteger(0);
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+
     }
 }

@@ -1,7 +1,11 @@
 package interpreter.ast;
 
+import interpreter.Helper;
 import interpreter.Token;
+import interpreter.errors.CompilerError;
 import interpreter.errors.SemanticError;
+
+import java.util.List;
 
 /**
  * Handles ==, !=
@@ -20,11 +24,6 @@ public class AstExprEquality extends AstExpr {
 
     @Override
     public Value run() {
-        if (type == Type.ERROR) {
-            errors.add(new SemanticError(String.format("bad operand types for binary operator '%s'", op.image), start, end));
-            return null;
-        }
-
         Value left = this.left.run();
         Value right = this.right.run();
 
@@ -36,5 +35,26 @@ public class AstExprEquality extends AstExpr {
             return new ValueBoolean(left.value.toString().equals(right.value.toString()));
         else
             return new ValueBoolean(!left.value.toString().equals(right.value.toString()));
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+        left.checkSemantic(errors);
+        right.checkSemantic(errors);
+        type = Helper.determineTypeBase(left.type, right.type);
+
+        if (type == Type.ERROR) {
+            errors.add(new SemanticError(String.format("bad operand types for binary operator '%s'", op.image), start, end));
+        }
+    }
+
+    @Override
+    public String toString() {
+        return left.toString() + " " + op.image + " " + right.toString();
+    }
+
+    @Override
+    public int length() {
+        return run().length();
     }
 }

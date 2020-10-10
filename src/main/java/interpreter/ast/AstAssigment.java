@@ -23,30 +23,33 @@ public class AstAssigment extends AstExpr {
     // INTERPRETER
 
     public Value run() {
-        if (!(left instanceof AstVariable)) {
-            errors.add(new SemanticError("can't assign to a literal value."));
-            return null;
-        }
-
         AstVariable v = (AstVariable) left;
-        if (symbolTable.find(v.identifier.image) == null) {
-            errors.add(new SemanticError(String.format("variable '%s' is not defined;", v.identifier)));
-            return null;
-        }
-
-        v.value = right;
-        return right.run();
+        v.value = right.run();
+        return (Value) v.value;
     }
 
     @Override
     public void checkSemantic(List<CompilerError> errors) {
-        if (!(left instanceof AstVariable)) {
-            errors.add(new SemanticError("can't assign to a literal value."));
+        if (left instanceof AstVariable) {
+            AstVariable v = (AstVariable) left;
+            if (symbolTable.find(v.identifier.image) == null) {
+                errors.add(new SemanticError(String.format("variable '%s' is not defined;", v.identifier)));
+            }
+        } else if (left instanceof AstLiteralIdent) {
+            AstLiteralIdent v = (AstLiteralIdent) left;
+            if (symbolTable.find(v.identifier.image) == null) {
+                errors.add(new SemanticError(String.format("variable '%s' is not defined;", v.identifier)));
+            }
+        } else {
+            errors.add(new SemanticError(String.format("can't assign to a literal value '%s'.", left.toString())));
         }
 
-        AstVariable v = (AstVariable) left;
-        if (symbolTable.find(v.identifier.image) == null) {
-            errors.add(new SemanticError(String.format("variable '%s' is not defined;", v.identifier)));
-        }
+        left.checkSemantic(errors);
+        right.checkSemantic(errors);
+    }
+
+    @Override
+    public int length() {
+        return run().length();
     }
 }

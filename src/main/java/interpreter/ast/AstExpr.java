@@ -1,11 +1,8 @@
 package interpreter.ast;
 
 import interpreter.Token;
-import interpreter.errors.CompilerError;
 
-import java.util.List;
-
-public class AstExpr extends AstStatement {
+public abstract class AstExpr extends AstStatement {
     public Type type = Type.ERROR;
 
     public AstExpr(Token start, Token end) {
@@ -21,6 +18,8 @@ public class AstExpr extends AstStatement {
         return null;
     }
 
-    @Override
-    public void checkSemantic(List<CompilerError> errors) {    }
+    /**
+     * Returns size of an element
+     */
+    public abstract int length();
 }

@@ -1,11 +1,13 @@
 import interpreter.ast.AstNode;
 import interpreter.ast.AstRoot;
 import interpreter.ast.AstVariable;
+import interpreter.errors.CompilerError;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import interpreter.NawkParser;
 import interpreter.ParseException;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class NawkParserTest {
@@ -25,39 +27,63 @@ public class NawkParserTest {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("1a_declaration_test.nawk"));
         AstRoot root = testSubject.start();
         List<AstNode> nodes = root.subtrees;
-        Assertions.assertThat(nodes.size()).isEqualTo(6);
-        // variable 'do' already defined
-        Assertions.assertThat(nodes.get(1).errors.size()).isEqualTo(1);
-        // int can not contain a string
-        Assertions.assertThat(nodes.get(2).errors.size()).isEqualTo(1);
-        // implicit string conversion
-        Assertions.assertThat(nodes.get(3) instanceof AstVariable).isTrue();
-        Assertions.assertThat(nodes.get(3).run().value.toString()).isEqualTo("5");
-        //
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
+        root.run();
+        Assertions.assertThat(errors.size()).isEqualTo(2);
     }
 
     @Test
     public void testBlockDeclaration() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("2_block_test.nawk"));
-        testSubject.start();
+        AstRoot root = testSubject.start();
+        List<AstNode> nodes = root.subtrees;
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
+        root.run();
     }
 
     @Test
     public void testBoolDeclaration() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("3_bool_test.nawk"));
-        testSubject.start();
+        AstRoot root = testSubject.start();
+        List<AstNode> nodes = root.subtrees;
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
+        root.run();
     }
 
     @Test
     public void testArray() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("4_array_test.nawk"));
-        testSubject.start();
+        AstRoot root = testSubject.start();
+        List<AstNode> nodes = root.subtrees;
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
+        root.run();
+    }
+
+    @Test
+    public void testArray2() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("4a_array_test.nawk"));
+        AstRoot root = testSubject.start();
+        List<AstNode> nodes = root.subtrees;
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
+        root.run();
     }
 
     @Test
     public void testFunction() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("5_function_test.nawk"));
-        testSubject.start();
+        AstRoot root = testSubject.start();
+        List<AstNode> nodes = root.subtrees;
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
+        root.run();
+        for (CompilerError err: errors) {
+            System.out.println(err.toString());
+        }
     }
 
 
@@ -65,6 +91,8 @@ public class NawkParserTest {
     public void testDefinition() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("6_definition_test.nawk"));
         AstRoot root = testSubject.start();
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
         List<AstNode> nodes = root.subtrees;
         Assertions.assertThat(nodes.size()).isEqualTo(12);
         Assertions.assertThat(nodes.get(0).run().value).isEqualTo(8);
@@ -101,14 +129,18 @@ public class NawkParserTest {
     @Test
     public void testStringOp() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("7_string-op_test.nawk"));
-        testSubject.start();
+        AstRoot root = testSubject.start();
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
+        root.run();
     }
 
     @Test
     public void testSemantic() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("8_semantic_test.nawk"));
         AstRoot root = testSubject.start();
-        root.run();
+        LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+        root.checkSemantic(errors);
     }
 
     @Test

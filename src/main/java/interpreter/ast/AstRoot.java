@@ -1,7 +1,9 @@
 package interpreter.ast;
 
 import interpreter.Token;
+import interpreter.errors.CompilerError;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class AstRoot extends AstNode {
@@ -25,5 +27,11 @@ public class AstRoot extends AstNode {
             tree.run();
 
         return new ValueBoolean(true);
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+        for (AstNode tree: subtrees)
+            tree.checkSemantic(errors);
     }
 }

@@ -1,5 +1,9 @@
 package interpreter.ast;
 
+import interpreter.errors.CompilerError;
+
+import java.util.List;
+
 public class ValueChar extends Value {
     public ValueChar(Character value) {
         super(Type.CHAR, value);
@@ -44,5 +48,15 @@ public class ValueChar extends Value {
     @Override
     public String toString() {
         return String.valueOf(value);
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+
+    }
+
+    @Override
+    public int length() {
+        return 2;
     }
 }

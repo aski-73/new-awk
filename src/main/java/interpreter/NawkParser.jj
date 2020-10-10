@@ -6,7 +6,7 @@ options {
 
 PARSER_BEGIN(NawkParser)
 package interpreter;
-import java.io.File;import java.io.FileReader;import java.util.LinkedList;import java.util.List;import interpreter.ast.*;import interpreter.errors.CompilerError;import interpreter.errors.SemanticError;import interpreter.errors.SyntaxError;
+import java.io.File;import java.io.FileReader;import java.util.LinkedList;import java.util.List;import interpreter.ast.*;import interpreter.errors.CompilerError;
 
 public class NawkParser {
 
@@ -14,13 +14,24 @@ public class NawkParser {
         try {
           if (args.length == 0) {
             interpreter.NawkParser parser = new NawkParser(NawkParser.class.getResourceAsStream("myawk.nawk"));
-            parser.start();
+              LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+              AstRoot root = parser.start();
+              root.checkSemantic(errors);
+              if (errors.size() > 0)
+                  System.out.println("Can not run program. Check out errors.");
+              else
+                  root.run();
           } else {
             for (String arg: args) {
-              File testFile =
-                      new File(arg);
-              NawkParser parser = new NawkParser(new FileReader(testFile));
-              AstRoot root = parser.start();
+                File testFile = new File(arg);
+                NawkParser parser = new NawkParser(new FileReader(testFile));
+                LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+                AstRoot root = parser.start();
+                root.checkSemantic(errors);
+                if (errors.size() > 0)
+                    System.out.println("Can not run program. Check out errors.");
+                else
+                    root.run();
             }
           }
         } catch (Exception e) {
@@ -129,8 +140,7 @@ AstStatement statement(SymbolTable st) : {
     // Lookahead 2 so that a exprStatement (=>String literal) and stringOpStatement can be differentiated
     | LOOKAHEAD(2) stmt = exprStatement(st)
     | stmt = printStatement(st)
-    | stmt = emptyStatement()
-    | stmt = stringOpStatement()) {
+    | stmt = emptyStatement()) {
         return stmt;
     }
 }
@@ -171,17 +181,17 @@ AstStatementEmpty emptyStatement() : {
     ";" {return new AstStatementEmpty();}
 }
 
-AstStatementStringOp stringOpStatement() : {
+AstExprStringOp stringOpExpr() : {
     List<AstEasyRegex> list = new LinkedList<AstEasyRegex>();
     AstEasyRegex a = null;
     Token t1, t2;
 } {
-    t1 = <STRING_LITERAL><AT>"{" ( a = stringOpEasyRegexStatement() { list.add(a); } )* t2 = "}" {
-        return new AstStatementStringOp(t1, t2, t1.image, list);
-    }
+    t1 = <STRING_LITERAL><AT>"{" ( a = stringOpEasyRegexExpr() { list.add(a); } )* t2 = "}" {
+    return new AstExprStringOp(t1, t2, t1.image, list);
+}
 }
 
-AstEasyRegex stringOpEasyRegexStatement() : {
+AstEasyRegex stringOpEasyRegexExpr() : {
     SymbolTable st = new SymbolTable(null);
     Token bang = null;
     Token regex;
@@ -225,7 +235,7 @@ Token primitiveType() : {
    | t = "string") {return t;}
 }
 
-AstVariable variableDeclaration(SymbolTable st) : {
+AstStatementVariableDeclaration variableDeclaration(SymbolTable st) : {
     Token type;
     AstVariable var;
     int dimensions = 0;
@@ -233,26 +243,7 @@ AstVariable variableDeclaration(SymbolTable st) : {
     type = type() ("[" "]" { dimensions++; })* var = variableDeclarator(st) ";" {
         var.start = type;
         var.dimensions = dimensions;
-        Type t = Type.parseType(type.image);
-
-        // first check if invalid types
-        Type typeBase = determineTypeBase(t, var.type);
-        if (typeBase == Type.ERROR || t.ordinal() < var.type.ordinal()) {
-            String msg = String.format("invalid types between '%s' and '%s'", t, var.type);
-            var.type = Type.ERROR;
-            var.errors.add(new SemanticError(msg, type, var.end));
-            return var;
-        }
-
-        // all types can implicitly be assigned to a type whose ordinal value is higher or equal
-        var.type = t;
-
-        if (st.find(var.identifier.image) != null)
-            var.errors.add(new SemanticError(String.format("Variable '%s' is already declared.%n", var.identifier.image), type, var.end));
-        else
-            st.add(var.identifier.image, var);
-
-        return var;
+        return new AstStatementVariableDeclaration(type, var.end, type, var, dimensions, st);
     }
 }
 
@@ -264,12 +255,8 @@ AstVariable variableDeclarator(SymbolTable st) : {
      id = <Ident> [ "=" val = arrayAndVariableInitializer(st) ] {
         // type is at this point not known, therefore set it to null (must be set later)
         var = new AstVariable(null, id, id);
-        if (val != null) {
-            // run to calc result and to set final type
-            var.value = val.run();
-            var.type = val.type;
-            var.end = val.end;
-        }
+        var.symbolTable = st;
+        var.value = val;
         return var;
     }
 }
@@ -285,31 +272,23 @@ AstExpr arrayAndVariableInitializer(SymbolTable st) : {
     Token t1, t2;
     AstExpr e1 = null, e2 = null;
     List<AstExpr> elements = new LinkedList<AstExpr>();
-    List<CompilerError> errors = new LinkedList<CompilerError>();
 } {
     // single & multi dim
     (t1 = "{" [ e1 = arrayAndVariableInitializer(st) { elements.add(e1); } ("," e2 = arrayAndVariableInitializer(st) {
-        if (e2 != null && e1 instanceof  AstExprArrayInit && !(e2 instanceof  AstExprArrayInit)) {
-            errors.add(new SyntaxError(String.format("incompatible array types '%s' and '%s'", e1.getClass().getName(), e2.getClass().getName()), e1.start, e2.end));
-        }
         elements.add(e2);
     } )* ] t2 = "}" {
-        val = new AstExprArrayInit(t1, t2, Type.VOID, elements);
+        val = new AstExprArrayInit(t1, t2, Type.VOID, elements, new SymbolTable(st));
         if (e1 != null) {
             if (e1 instanceof AstExprArrayInit) // array of arrays
                 ((AstExprArrayInit) val).dimensions += ((AstExprArrayInit) e1).dimensions;
-
-            // assign type of literal value
-            val.type = e1.run().type;
         }
-
-
-        // if errors were made, assign them
-        val.errors = errors;
     }
     // zero dim, normal variable
     |
-    val = expr(st) { return val; }) { return val; }
+    LOOKAHEAD(3)
+    val = stringOpExpr()
+    |
+    val = expr(st)) { return val; }
 }
 
 /** FUNCTION DECLARATION **/
@@ -320,9 +299,11 @@ AstFunctionDeclaration functionDeclaration() : {
     Token t;
     Token i;
     AstFunctionBlock block;
+    AstVariable a;
+    List<AstVariable> params = new LinkedList<AstVariable>();
 } {
-    t = resultType() i = <Ident> "(" [ functionParameter(st) ( "," functionParameter(st))* ] ")" block = functionBlock(st) {
-        return new AstFunctionDeclaration(t, block.end, i, st, block);
+    t = resultType() i = <Ident> "(" [ a = functionParameter(st) { params.add(a); } ( "," a = functionParameter(st) { params.add(a); })* ] ")" block = functionBlock(st) {
+        return new AstFunctionDeclaration(t, block.end, i, st, block, params);
     }
 }
 
@@ -338,12 +319,7 @@ AstVariable functionParameter(SymbolTable st) : {
     type = primitiveType() ("[" "]" { dimensions++; })* id = <Ident>  {
         a = new AstVariable(type, id, id);
         a.dimensions = dimensions;
-        if (st.find(id.image) == null) {
-            st.add(id.image, a);
-        } else {
-            String msg = String.format("'%s' is already defined in this function", id.image);
-            a.errors.add(new SemanticError(msg, type, id));
-        }
+        a.symbolTable = st;
         return a;
     }
 }
@@ -357,7 +333,7 @@ AstFunctionBlock functionBlock(SymbolTable st) : {
     t1 = "{" ( a = statement(st) { list.add(a); } )* ["return" returnValue = expr(st) ";"]  t2 = "}" {
         AstFunctionBlock afb = new AstFunctionBlock(t1, t2, list, returnValue);
         // give reference to symbol table so that identifiers can be evaluated at runtime. Most needed for the
-        // string-operator because the "this" values is evaluated at runtime
+        // string-operator and special array expressions because the "this" values is evaluated at runtime
         afb.symbolTable = st;
 
         return afb;
@@ -375,6 +351,7 @@ AstExpr expr(SymbolTable st): {
         if (right != null) {
             return new AstAssigment(left.start, right.end, left, right, st);
         }
+        left.end = left.start;
         return left;
     }
 }
@@ -384,8 +361,9 @@ AstExpr conditionalOrExpression(SymbolTable st) : {
      Token op = null;
  } {
     left = conditionalAndExpression(st) ( op = "||" right = conditionalAndExpression(st) {
-        Type baseType = validateTypesForConditionalOp(left, right, op);
-        return new AstExprConditionalOr(left, right, op, baseType);
+        Type baseType = Helper.validateTypesForConditionalOp(left, right, op);
+        AstExpr a =  new AstExprConditionalOr(left, right, op, baseType);
+        a.symbolTable = st;
     })* { return left; }
 }
 
@@ -394,8 +372,10 @@ AstExpr conditionalAndExpression(SymbolTable st) : {
      Token op = null;
  } {
     left = equalityExpression(st) (op = "&&" right = equalityExpression(st) {
-        Type baseType = validateTypesForConditionalOp(left, right, op);
-        return new AstExprConditionalAnd(left, right, op, baseType);
+        Type baseType = Helper.validateTypesForConditionalOp(left, right, op);
+        AstExpr a = new AstExprConditionalAnd(left, right, op, baseType);
+        // left and right already have a symbol table. Got in equality expression
+        a.symbolTable = st;
     })* { return left; }
 }
 
@@ -404,11 +384,10 @@ AstExpr equalityExpression(SymbolTable st) : {
      Token op = null;
  } {
     left = relationalExpression(st) ( ( op = "==" | op = "!=" ) right = relationalExpression(st) {
-        Type typeBase = validateTypes(left, right, op);
+        Type typeBase = Helper.validateTypes(left, right, op);
         left = new AstExprEquality(left, right, op, typeBase);
-        if (typeBase == Type.ERROR) {
-            left.errors.add(new SemanticError(String.format("invalid types for ==/!= '%s' and '%s'", left.type.toString(), right.type.toString()), left.start, right.end));
-        }
+        left.symbolTable = st;
+        right.symbolTable = st;
     } )* { return left; }
 }
 
@@ -418,8 +397,10 @@ AstExpr relationalExpression(SymbolTable st) : {
  } {
     left = additiveExpression(st) [ ( op = "<" | op = ">" | op = "<=" | op = ">=" ) right = additiveExpression(st)  {
         // only allowed between numeric values
-        Type typeBase = validateTypes(left, right, op);
+        Type typeBase = Helper.validateTypes(left, right, op);
         left = new AstExprRelational(left, right, op, typeBase);
+        left.symbolTable = st;
+        right.symbolTable = st;
     } ] { return left; }
 }
 
@@ -428,8 +409,10 @@ AstExpr additiveExpression(SymbolTable st) : {
      Token op = null;
  } {
     left = multiplicativeExpression(st) ( ( op = "+" | op = "-" ) right = multiplicativeExpression(st) {
-        Type baseType = validateTypesForAdditiveOp(left, right, op);
+        Type baseType = Helper.validateTypesForAdditiveOp(left, right, op);
         left = new AstExprAdditive(left, right, op, baseType);
+        left.symbolTable = st;
+        right.symbolTable = st;
     })* { return left; }
 }
 
@@ -445,23 +428,26 @@ AstExpr multiplicativeExpression(SymbolTable st) : {
 } {
     left = unaryExpression(st) ( ( op = "*" | op = "/" | op = "%" ) right = unaryExpression(st) {
         // only allowed between numeric values
-        Type typeBase = validateTypes(left, right, op);
+        Type typeBase = Helper.validateTypes(left, right, op);
         left = new AstExprMultiplicative(left, right, op, typeBase);
+        left.symbolTable = st;
+        right.symbolTable = st;
     } )* { return left; }
 }
 
 AstExpr unaryExpression(SymbolTable st) : {
    Token op = null;
-   AstExpr expr;
+   AstExpr expr, a;
 } {
-    [op = "+" | op = "-" | op = "++" | op = "--" | op = "!"] expr = primaryExpression(st) {return new AstExprUnary(op, expr);}
+    [op = "+" | op = "-" | op = "++" | op = "--" | op = "!"] expr = primaryExpression(st) {a =  new AstExprUnary(op, expr); a.symbolTable = st; return a;}
 }
 
 AstExpr primaryExpression(SymbolTable st) : {
     AstExpr lit;
     AstExpr suffix = null;
+    AstExpr a;
  } {
-    lit = literal(st) [suffix = primarySuffix(st, lit)] {return new AstExprPrimary(lit, suffix);}
+    lit = literal(st) [suffix = primarySuffix(st, lit)] {a = new AstExprPrimary(lit, suffix); a.symbolTable = st; return a;}
 }
 
 AstExpr primarySuffix(SymbolTable st, AstExpr identifier) : {
@@ -471,44 +457,13 @@ AstExpr primarySuffix(SymbolTable st, AstExpr identifier) : {
     List<AstExpr> indices = new LinkedList<AstExpr>();
     Token start, end;
  } {
-    start = "[" [e = expr(st) { indices.add(e); }]  end = "]" ("[" e = expr(st) { indices.add(e); } end = "]")* {  // Array Zugriff
-        AstExprArrayCall aac = new AstExprArrayCall(start, end, null, indices);
-        if (!(identifier instanceof AstVariable) || !(identifier instanceof AstExprArrayInit)) {
-            String msg = String.format("'%s' is not an array", identifier.toString());
-            aac.errors.add(new SemanticError(msg, start, end));
-        } else {
-            String i =  ((AstVariable) identifier).identifier.image;
-           if (st.find(i) != null) {
-             aac.declaration = (AstExprArrayInit) st.find(i).value;
-           } else {
-             String msg = String.format("array '%s' is not declared", i);
-             aac.errors.add(new SemanticError(msg, start, end));
-           }
-        }
-
-        return aac;
+    start = "[" [e = expr(st) { indices.add(e); }]  end = "]" ("[" e = expr(st) { indices.add(e); } end = "]")* {  // Array access
+        // declaration is set after semantic analysis
+        return new AstExprArrayCall(start, end, null, indices, identifier, st);
     }
     |
-    start = "(" e = arrayAndVariableInitializer(st) { params.add(e); } ("," arrayAndVariableInitializer(st))* end = ")" { // Function Call
-        AstExprFunctionCall asf;
-        if (!(identifier instanceof AstLiteralIdent)) {
-            asf = new AstExprFunctionCall(start, end, identifier.toString(), null, params);
-            String msg = String.format("'%s' is not an function identifier", identifier.toString());
-            asf.errors.add(new SemanticError(msg, start, end));
-        } else {
-            String i =  ((AstLiteralIdent) identifier).identifier.image;
-            asf = new AstExprFunctionCall(start, end, i, null, params);
-
-            if (st.find(i) instanceof AstFunctionDeclaration) {
-                asf.declaration = (AstFunctionDeclaration) st.find(i);
-            } else {
-                if (!Helper.isPredefined(i)) {
-                    String msg = String.format("function '%s' is not declared or a function", i);
-                    asf.errors.add(new SemanticError(msg, start, end));
-                }
-            }
-        }
-        return asf;
+    start = "("[ e = arrayAndVariableInitializer(st) { params.add(e); } ("," e = arrayAndVariableInitializer(st) { params.add(e); } )* ] end = ")" { // Function Call
+        return new AstExprFunctionCall(start, end, identifier, null, params, st);
     }
 }
 
@@ -523,120 +478,5 @@ AstExpr literal(SymbolTable st) : {
     | t = <STRING_LITERAL>  { literal = new AstLiteralString(t);}
     | (t = <TRUE> | t = <FALSE>)  { literal = new AstLiteralBoolean(t);}
     | t = <Ident> { literal = new AstLiteralIdent(t, st); }
-    | "(" literal = expr(st)")") { return literal; } // return type when one rule in the "()" is succefully applied
-}
-
-JAVACODE
-AstNode skipError(int kind) {
-    ParseException e = generateParseException();
-    System.out.println("Hello " + e.toString());
-    Token t;
-    do {
-        t = getNextToken();
-    } while (t.kind != kind);
-    return null;
-}
-
-JAVACODE
-boolean isNumeric(Type type) {
-    return type == Type.INT || type == Type.CHAR || type == Type.DOUBLE;
-}
-
-JAVACODE
-Type determineTypeBase(Type t1, Type t2) {
-     if (t1 == null || t2 == null)
-         return Type.ERROR;
-
-    if (t1.ordinal() > Type.STRING.ordinal() || t2.ordinal() > Type.STRING.ordinal()) // error or void
-        return Type.ERROR;
-
-    if (t1 == Type.STRING || t2 == Type.STRING) // convert to string
-        return Type.STRING;
-
-    if ((t1 == Type.BOOLEAN && t2 != Type.BOOLEAN) || (t2 == Type.BOOLEAN && t1 != Type.BOOLEAN)) // only boolean with boolean
-        return Type.ERROR;
-
-    if (t1 == Type.BOOLEAN && t2 == Type.BOOLEAN)
-        return Type.BOOLEAN;
-
-    // Otherwise numeric values
-
-    //   OP   # char   # int #  double
-    //  # # # # # # # # # # # # # # # #
-    // char   # int      int    double
-    // int    # int      int    double
-    // double ä double  double  double
-    if (t1 == Type.DOUBLE || t2 == Type.DOUBLE) return Type.DOUBLE;
-
-    return Type.INT;
-}
-
-JAVACODE
-Type validateTypes(AstExpr left, AstExpr right, Token op) {
-    if (right == null || op == null) // no point in type checking if no right expression exists
-        return left.type;
-
-    return determineTypeBase(left.type, right.type);
-}
-
-/**
-* Check types for && (AND) and || (OR)
-* Conditional operation is only allowed between boolean values
-*/
-JAVACODE
-Type validateTypesForConditionalOp(AstExpr left, AstExpr right, Token op) {
-    if (right == null || op == null) // no point in type checking if no right expression exists
-        return left.type;
-
-    // Only allowed between boolean types
-    if (left.type != Type.BOOLEAN || right.type != Type.BOOLEAN) {
-        System.out.printf("Bad operator '%s' between types '%s' and '%s'.%n", op.image, left.type, right.type);
-        return Type.ERROR;
-    }
-
-    return Type.BOOLEAN;
-}
-
-/**
-* int/double/char/boolean/string + string is allowed
-* int/double/char/boolean/string - string is  not allowed
-* int/double/char/boolean +/- boolean is not allowed
-*/
-JAVACODE
-Type validateTypesForAdditiveOp(AstExpr left, AstExpr right, Token op) {
-    if (right == null || op == null) // no point in type checking if no right expression exists
-        return left.type;
-
-    if (left.type == Type.ERROR || right.type == Type.ERROR ) {
-        System.out.printf("Invalid Types '%s' '%s' %n", left.type, right.type);
-        return Type.ERROR;
-    }
-
-    if (isNumeric(left.type) && isNumeric(right.type)) { // ok
-        return determineTypeBase(left.type, right.type);
-    } else if (left.type == Type.STRING || right.type == Type.STRING ) { // Addition with String => Concat
-        if (op.image == "+")
-            return Type.STRING;
-        else {
-            System.out.printf("Subtraction between '%s' and '%s' is not allowed%n", left.type, right.type);
-            return Type.ERROR;
-        }
-    } else { // boolean with numerics or boolean with boolean
-        System.out.printf("Bad operator '%s' between types '%s' and '%s'.%n", op.image, left.type, right.type);
-        System.out.println("Addition/Subtraction between numeric values and boolean or boolean with boolean is not allowed");
-        return Type.ERROR;
-    }
-}
-
-JAVACODE
-public boolean isPredefined(String functionName) {
-    return functionName.equals("toDouble")
-            || functionName.equals("toInt")
-            || functionName.equals("toChar")
-            || functionName.equals("toBoolean")
-            || functionName.equals("isDouble")
-            || functionName.equals("isInt")
-            || functionName.equals("isChar")
-            || functionName.equals("isBoolean")
-            || functionName.equals("print");
+    | "(" literal = expr(st)")") { literal.symbolTable = st; return literal;  } // return type when one rule in the "()" is succefully applied
 }

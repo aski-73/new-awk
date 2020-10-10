@@ -6,8 +6,6 @@ import java.util.LinkedList;
 import java.util.List;
 import interpreter.ast.*;
 import interpreter.errors.CompilerError;
-import interpreter.errors.SemanticError;
-import interpreter.errors.SyntaxError;
 
 /** Token Manager. */
 public class NawkParserTokenManager implements NawkParserConstants

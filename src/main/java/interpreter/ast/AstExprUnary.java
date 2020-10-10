@@ -1,6 +1,9 @@
 package interpreter.ast;
 
 import interpreter.Token;
+import interpreter.errors.CompilerError;
+
+import java.util.List;
 
 public class AstExprUnary extends AstExpr {
     public Token unaryOp;
@@ -44,5 +47,24 @@ public class AstExprUnary extends AstExpr {
                 copy.unaryBang();
         }
         return copy;
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+        expr.checkSemantic(errors);
+        type = expr.type;
+    }
+
+    @Override
+    public String toString() {
+        if (unaryOp != null)
+            return unaryOp.image + expr.toString();
+        else
+            return expr.toString();
+    }
+
+    @Override
+    public int length() {
+        return run().length();
     }
 }

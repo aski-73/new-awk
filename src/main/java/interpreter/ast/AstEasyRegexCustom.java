@@ -1,5 +1,8 @@
 package interpreter.ast;
 
+import interpreter.errors.CompilerError;
+
+import java.util.List;
 import java.util.UUID;
 
 public class AstEasyRegexCustom extends AstEasyRegex {
@@ -25,5 +28,13 @@ public class AstEasyRegexCustom extends AstEasyRegex {
     public Value run() {
 //        if (astFunctionBlock.returnValue instanceof )
         return null;
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+        // function block is optional
+        if (astFunctionBlock != null) {
+            astFunctionBlock.checkSemantic(errors);
+        }
     }
 }

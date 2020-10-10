@@ -1,5 +1,9 @@
 package interpreter.ast;
 
+import interpreter.errors.CompilerError;
+
+import java.util.List;
+
 public class ValueDouble extends Value {
     public ValueDouble(Double value) {
         super(Type.DOUBLE, value);
@@ -43,5 +47,15 @@ public class ValueDouble extends Value {
     @Override
     public String toString() {
         return String.valueOf(value);
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+
+    }
+
+    @Override
+    public int length() {
+        return ((Number) value).intValue();
     }
 }

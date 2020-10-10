@@ -1,6 +1,7 @@
 package interpreter.ast;
 
 import interpreter.Token;
+import interpreter.errors.CompilerError;
 
 import java.util.List;
 
@@ -16,10 +17,22 @@ public class AstFunctionBlock extends AstNode {
 
     @Override
     public Value run() {
-        for (AstStatement st: statements) {
+        for (AstStatement st : statements) {
             st.run();
         }
 
+        if (returnValue == null)
+            return new ValueString("");
+
         return returnValue.run();
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+        for (AstStatement statement : statements)
+            statement.checkSemantic(errors);
+
+        if (returnValue != null)
+            returnValue.checkSemantic(errors);
     }
 }

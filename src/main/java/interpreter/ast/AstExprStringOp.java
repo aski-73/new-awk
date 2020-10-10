@@ -2,13 +2,15 @@ package interpreter.ast;
 
 import interpreter.NawkParserConstants;
 import interpreter.Token;
+import interpreter.errors.CompilerError;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class AstStatementStringOp extends AstStatement {
+public class AstExprStringOp extends AstExpr {
     /**
      * String that gets checked against the easy-regex expressions inside the block
      */
@@ -18,10 +20,11 @@ public class AstStatementStringOp extends AstStatement {
      */
     public List<AstEasyRegex> easyRegexList;
 
-    public AstStatementStringOp(Token start, Token end, String stringLiteral, List<AstEasyRegex> easyRegexList) {
+    public AstExprStringOp(Token start, Token end, String stringLiteral, List<AstEasyRegex> easyRegexList) {
         super(start, end);
         this.stringLiteral = stringLiteral;
         this.easyRegexList = easyRegexList;
+        type = Type.STRING;
     }
 
     /**
@@ -37,7 +40,7 @@ public class AstStatementStringOp extends AstStatement {
     public Value run() {
         // Result
         List<AstExpr> elements = new LinkedList<>();
-        AstExprArrayInit result = new AstExprArrayInit(null, null, Type.STRING, elements);
+        AstExprArrayInit result = new AstExprArrayInit(null, null, Type.STRING, elements, new SymbolTable(symbolTable));
 
         // Creating a Lexer with Java Pattern API and named group feature
 
@@ -51,7 +54,7 @@ public class AstStatementStringOp extends AstStatement {
                 }
         );
 
-        Pattern p = Pattern.compile(masterRegex.substring(masterRegex.toString().length()));
+        Pattern p = Pattern.compile(masterRegex.substring(0, masterRegex.toString().length() - 1));
 
         // Begin matching tokens
         Matcher matcher = p.matcher(stringLiteral);
@@ -67,9 +70,12 @@ public class AstStatementStringOp extends AstStatement {
                         AstVariable thisVar = new AstVariable(type, id, id);
                         thisVar.value = new AstLiteralString(Token.newToken(NawkParserConstants.STRING, token));
                         ar.astFunctionBlock.symbolTable.add("this", thisVar);
+
+                        // trigger semantic analysis because new value in symbol table
+                        ar.astFunctionBlock.checkSemantic(Collections.emptyList());
+
                         // run block statement of easy regex
                         ar.astFunctionBlock.run();
-
 
                         if (ar.astFunctionBlock.returnValue == null) { // no return value => just add matched token to result
                             elements.add(new AstLiteralString(Token.newToken(NawkParserConstants.STRING, token)));
@@ -82,5 +88,16 @@ public class AstStatementStringOp extends AstStatement {
         }
 
         return result;
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+        for (AstEasyRegex easyRegex: easyRegexList)
+            easyRegex.checkSemantic(errors);
+    }
+
+    @Override
+    public int length() {
+        return stringLiteral.length();
     }
 }

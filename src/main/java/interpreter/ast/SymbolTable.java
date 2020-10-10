@@ -17,8 +17,6 @@ public class SymbolTable {
     public void add(String id, AstVariable t) {
         if (find(id) == null) {
             table.put(id, t);
-        } else {
-            System.out.printf("Variable '%s' is already declared.%n", id);
         }
     }
 
@@ -33,5 +31,9 @@ public class SymbolTable {
             return parent.find(id);
         }
         return null;
+    }
+
+    public void removeValue(String id) {
+        table.remove(id);
     }
 }

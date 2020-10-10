@@ -1,7 +1,11 @@
 package interpreter.ast;
 
+import interpreter.Helper;
 import interpreter.Token;
+import interpreter.errors.CompilerError;
 import interpreter.errors.SemanticError;
+
+import java.util.List;
 
 /**
  * Handles >, >=, <, <=
@@ -25,11 +29,6 @@ public class AstExprRelational extends AstExpr {
      */
     @Override
     public Value run() {
-        if (type == Type.ERROR || type == Type.STRING || type == Type.BOOLEAN) {
-            errors.add(new SemanticError(String.format("bad operand types for binary operator '%s'", op.image), start, end));
-            return null;
-        }
-
         Value left = this.left.run();
         Value right = this.right.run();
 
@@ -47,5 +46,25 @@ public class AstExprRelational extends AstExpr {
             default: // <=
                 return new ValueBoolean(((Number) left.value).doubleValue() <= ((Number) right.value).doubleValue());
         }
+    }
+
+    @Override
+    public void checkSemantic(List<CompilerError> errors) {
+        left.checkSemantic(errors);
+        right.checkSemantic(errors);
+        type = Helper.determineTypeBase(left.type, right.type);
+        if (type == Type.ERROR || type == Type.STRING || type == Type.BOOLEAN) {
+            errors.add(new SemanticError(String.format("bad operand types for binary operator '%s'", op.image), start, end));
+        }
+    }
+
+    @Override
+    public String toString() {
+        return left.toString() + " " + op.image + " " + right.toString();
+    }
+
+    @Override
+    public int length() {
+        return run().length();
     }
 }
