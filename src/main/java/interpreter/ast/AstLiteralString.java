@@ -15,7 +15,7 @@ public class AstLiteralString extends AstExpr {
     public Value run() {
         // remove leading and trailing quotation marks of the token (otherwise we would have quotation marks in
         // quotation marks)
-        if (start.image.startsWith("\"\""))
+        if (start.image.startsWith("\""))
             return new ValueString(start.image.substring(1, start.image.length() - 1));
         else
             return new ValueString(start.image);

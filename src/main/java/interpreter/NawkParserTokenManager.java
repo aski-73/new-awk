@@ -2,10 +2,12 @@
 package interpreter;
 import java.io.File;
 import java.io.FileReader;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.LinkedList;
 import java.util.List;
 import interpreter.ast.*;
-import interpreter.errors.CompilerError;
+import interpreter.errors.*;
 
 /** Token Manager. */
 public class NawkParserTokenManager implements NawkParserConstants
