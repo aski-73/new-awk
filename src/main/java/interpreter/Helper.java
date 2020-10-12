@@ -6,11 +6,11 @@ import interpreter.ast.Type;
 public class Helper {
     public static boolean isPredefined(String functionName) {
         return functionName.equals("toDouble")
-                || functionName.equals("toInt")
+                || functionName.equals("toInteger")
                 || functionName.equals("toChar")
                 || functionName.equals("toBoolean")
                 || functionName.equals("isDouble")
-                || functionName.equals("isInt")
+                || functionName.equals("isInteger")
                 || functionName.equals("isChar")
                 || functionName.equals("isBoolean")
                 || functionName.equals("print")
@@ -61,13 +61,13 @@ public class Helper {
      * Check types for && (AND) and || (OR)
      * Conditional operation is only allowed between boolean values
      */
-    public static Type validateTypesForConditionalOp(AstExpr left, AstExpr right, Token op) {
+    public static Type validateTypesForConditionalOp(Type left, Type right, Token op) {
         if (right == null || op == null) // no point in type checking if no right expression exists
-            return left.type;
+            return left;
 
         // Only allowed between boolean types
-        if (left.type != Type.BOOLEAN || right.type != Type.BOOLEAN) {
-            System.out.printf("Bad operator '%s' between types '%s' and '%s'.%n", op.image, left.type, right.type);
+        if (left != Type.BOOLEAN || right != Type.BOOLEAN) {
+            System.out.printf("Bad operator '%s' between types '%s' and '%s'.%n", op.image, left, right);
             return Type.ERROR;
         }
 

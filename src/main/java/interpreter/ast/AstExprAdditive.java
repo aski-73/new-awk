@@ -51,7 +51,6 @@ public class AstExprAdditive extends AstExpr {
         left.checkSemantic(errors);
         right.checkSemantic(errors);
         type = Helper.determineTypeBase(left.type, right.type);
-
         if (type == Type.ERROR || type == Type.BOOLEAN)
             errors.add(new SemanticError(String.format("bad operand types for binary operator '%s'", op.image), start, end));
 

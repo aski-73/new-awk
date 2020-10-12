@@ -7,7 +7,8 @@ public class NawkParser implements NawkParserConstants {
     public static void main(String[] args) {
         try {
           if (args.length == 0) {
-            interpreter.NawkParser parser = new NawkParser(NawkParser.class.getResourceAsStream("myawk.nawk"));
+            System.out.println("Running with default file ...");
+            interpreter.NawkParser parser = new NawkParser(NawkParser.class.getClassLoader().getResourceAsStream("testfile_.nawk"));
               AstRoot root = parser.start();
               root.checkSemantic(parser.globalErrors);
               if (parser.globalErrors.size() > 0)
@@ -15,13 +16,21 @@ public class NawkParser implements NawkParserConstants {
               else
                   root.run();
           } else {
+              System.out.println("Running with arguments...");
             for (String arg: args) {
                 File testFile = new File(arg);
+                System.out.println("Reading in \u00f6p\u00f6p\u00f6File....");
                 NawkParser parser = new NawkParser(new FileReader(testFile));
                 AstRoot root = parser.start();
-                root.checkSemantic(parser.globalErrors);
-                if (parser.globalErrors.size() > 0)
+                LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+
+                root.checkSemantic(errors);
+                if (errors.size() > 0) {
                     System.out.println("Can not run program. Check out errors.");
+                    for (CompilerError err : parser.globalErrors){
+                        System.out.println(err.toString());
+                    }
+                }
                 else
                     root.run();
             }
@@ -35,72 +44,96 @@ public class NawkParser implements NawkParserConstants {
 
 // Root-Regel
   final public AstRoot start() throws ParseException {
+    trace_call("start");
+    try {
     AstRoot root;
     Set<Integer> syncChars = new HashSet<Integer>();
     syncChars.add(NawkParserConstants.EOF);
-    root = prog(syncChars);
-    jj_consume_token(0);
+      root = prog(syncChars);
+      jj_consume_token(0);
                                    {if (true) return root;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("start");
+    }
   }
 
   final public AstRoot prog(Set<Integer> syncChars) throws ParseException {
+    trace_call("prog");
+    try {
     SymbolTable globalSt = new SymbolTable(null);
     List<AstNode> subtrees = new LinkedList<AstNode>();
     AstRoot root;
     AstNode a;
-    label_1:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case PLUS:
-      case PPLUS:
-      case MINUS:
-      case MMINUS:
-      case BANG:
-      case LPAREN:
-      case LBRACE:
-      case SEMICOLON:
-      case DOUBLE:
-      case INTEGER:
-      case STRING:
-      case BOOLEAN:
-      case CHAR:
-      case VOID:
-      case TRUE:
-      case FALSE:
-      case PRINT:
-      case INTEGER_LITERAL:
-      case DOUBLE_LITERAL:
-      case CHAR_LTIERAL:
-      case STRING_LITERAL:
-      case Ident:
-        ;
-        break;
-      default:
-        jj_la1[0] = jj_gen;
-        break label_1;
-      }
-      if (jj_2_1(3)) {
-        a = statement(globalSt);
-                                             subtrees.add(a);
-      } else {
+      label_1:
+      while (true) {
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case PLUS:
+        case PPLUS:
+        case MINUS:
+        case MMINUS:
+        case BANG:
+        case LPAREN:
+        case LBRACE:
         case DOUBLE:
         case INTEGER:
         case STRING:
         case BOOLEAN:
         case CHAR:
         case VOID:
-          a = functionDeclaration();
-                                                                                              subtrees.add(a); globalSt.add(((AstFunctionDeclaration)a).identifier.image, (AstVariable) a);
+        case TRUE:
+        case FALSE:
+        case PRINT:
+        case WHILE:
+        case IF:
+        case INTEGER_LITERAL:
+        case DOUBLE_LITERAL:
+        case CHAR_LTIERAL:
+        case STRING_LITERAL:
+        case Ident:
+          ;
           break;
         default:
-          jj_la1[1] = jj_gen;
-          jj_consume_token(-1);
-          throw new ParseException();
+          jj_la1[0] = jj_gen;
+          break label_1;
+        }
+        if (jj_2_1(5)) {
+          a = functionDeclaration();
+                                               subtrees.add(a); globalSt.add(((AstFunctionDeclaration)a).identifier.image, (AstVariable) a);
+        } else {
+          switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+          case PLUS:
+          case PPLUS:
+          case MINUS:
+          case MMINUS:
+          case BANG:
+          case LPAREN:
+          case LBRACE:
+          case DOUBLE:
+          case INTEGER:
+          case STRING:
+          case BOOLEAN:
+          case CHAR:
+          case TRUE:
+          case FALSE:
+          case PRINT:
+          case WHILE:
+          case IF:
+          case INTEGER_LITERAL:
+          case DOUBLE_LITERAL:
+          case CHAR_LTIERAL:
+          case STRING_LITERAL:
+          case Ident:
+            a = statement(globalSt);
+                                                                                                                                                                           subtrees.add(a);
+            break;
+          default:
+            jj_la1[1] = jj_gen;
+            jj_consume_token(-1);
+            throw new ParseException();
+          }
         }
       }
-    }
         if (subtrees.size() > 0)
             root = new AstRoot(subtrees.get(0).start, subtrees.get(subtrees.size() - 1).end, subtrees, globalSt);
         else
@@ -108,345 +141,68 @@ public class NawkParser implements NawkParserConstants {
 
          {if (true) return root;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("prog");
+    }
   }
 
 /** STATEMENTS **/
   final public AstStatement statement(SymbolTable st) throws ParseException {
-    AstStatement stmt;
+    trace_call("statement");
     try {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case DOUBLE:
-      case INTEGER:
-      case STRING:
-      case BOOLEAN:
-      case CHAR:
-        stmt = variableDeclaration(st);
-        break;
-      default:
-        jj_la1[2] = jj_gen;
-        if (jj_2_2(3)) {
-          stmt = blockStatement(st);
-        } else if (jj_2_3(2)) {
-          stmt = exprStatement(st);
-        } else {
-          switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-          case PRINT:
-            stmt = printStatement(st);
-            break;
-          case SEMICOLON:
-            stmt = emptyStatement();
-            break;
-          default:
-            jj_la1[3] = jj_gen;
-            jj_consume_token(-1);
-            throw new ParseException();
+    AstStatement stmt;
+      if (jj_2_2(10)) {
+        stmt = blockStatement(st);
+      } else {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case DOUBLE:
+        case INTEGER:
+        case STRING:
+        case BOOLEAN:
+        case CHAR:
+          stmt = variableDeclaration(st);
+          break;
+        default:
+          jj_la1[2] = jj_gen;
+          if (jj_2_3(2)) {
+            stmt = exprStatement(st);
+          } else {
+            switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+            case PRINT:
+              stmt = printStatement(st);
+              break;
+            case WHILE:
+              stmt = whileStatement(st);
+              break;
+            case IF:
+              stmt = ifStatement(st);
+              break;
+            default:
+              jj_la1[3] = jj_gen;
+              jj_consume_token(-1);
+              throw new ParseException();
+            }
           }
         }
       }
         {if (true) return stmt;}
-    } catch (ParseException e) {
-    {if (true) return new AstStatementNone();}
-    }
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("statement");
+    }
   }
 
   final public AstStatement printStatement(SymbolTable st) throws ParseException {
+    trace_call("printStatement");
+    try {
     AstExpr e = null;
     Token t1 = null, t2 = null, t3 = null, t4 = null;
     Set<Integer> syncChars = new HashSet<Integer>();
     syncChars.add(NawkParserConstants.RBRACE);
     syncChars.add(NawkParserConstants.SEMICOLON);
-    try {
-      t1 = jj_consume_token(PRINT);
-      t2 = jj_consume_token(LPAREN);
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case PLUS:
-      case PPLUS:
-      case MINUS:
-      case MMINUS:
-      case BANG:
-      case LPAREN:
-      case LBRACE:
-      case TRUE:
-      case FALSE:
-      case INTEGER_LITERAL:
-      case DOUBLE_LITERAL:
-      case CHAR_LTIERAL:
-      case STRING_LITERAL:
-      case Ident:
-        e = arrayAndVariableInitializer(st);
-        break;
-      default:
-        jj_la1[4] = jj_gen;
-        missingExpression(t2);
-      }
-      t3 = jj_consume_token(RPAREN);
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case SEMICOLON:
-        t4 = jj_consume_token(SEMICOLON);
-        break;
-      default:
-        jj_la1[5] = jj_gen;
-        missingSemicolon(t3);
-      }
-        {if (true) return new AstStatementPrint(t1, t4, e);}
-    } catch (ParseException ex) {
-    skipUntil(syncChars);
-    globalErrors.add(new SyntaxError(ex.getMessage(), t1, t4));
-    {if (true) return new AstStatementNone();}
-    }
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstStatement blockStatement(SymbolTable parentSt) throws ParseException {
-    SymbolTable st = new SymbolTable(parentSt);
-    List<AstStatement> list;
-    Token t1, t2;
-    t1 = jj_consume_token(LBRACE);
-    list = blockStatementContent(st);
-    t2 = jj_consume_token(RBRACE);
-                                                         {if (true) return new AstStatementBlock(t1, t2, list);}
-    throw new Error("Missing return statement in function");
-  }
-
-// Workaround, da (..)* in blockStatement nicht stehen kann, ohne dass
-// javecc unreachable code erzeugt
-  final public List<AstStatement> blockStatementContent(SymbolTable st) throws ParseException {
-    List<AstStatement> list = new LinkedList<AstStatement>();
-    AstStatement a;
-    label_2:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case PLUS:
-      case PPLUS:
-      case MINUS:
-      case MMINUS:
-      case BANG:
-      case LPAREN:
-      case LBRACE:
-      case SEMICOLON:
-      case DOUBLE:
-      case INTEGER:
-      case STRING:
-      case BOOLEAN:
-      case CHAR:
-      case TRUE:
-      case FALSE:
-      case PRINT:
-      case INTEGER_LITERAL:
-      case DOUBLE_LITERAL:
-      case CHAR_LTIERAL:
-      case STRING_LITERAL:
-      case Ident:
-        ;
-        break;
-      default:
-        jj_la1[6] = jj_gen;
-        break label_2;
-      }
-      a = statement(st);
-                          list.add(a);
-    }
-                                              {if (true) return list;}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstExpr exprStatement(SymbolTable st) throws ParseException {
-    AstExpr e;
-    e = arrayAndVariableInitializer(st);
-    jj_consume_token(SEMICOLON);
-                                             {if (true) return e;}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstStatementEmpty emptyStatement() throws ParseException {
-    jj_consume_token(SEMICOLON);
-         {if (true) return new AstStatementEmpty();}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstExprStringOp stringOpExpr() throws ParseException {
-    List<AstEasyRegex> list = new LinkedList<AstEasyRegex>();
-    AstEasyRegex a = null;
-    Token t1, t2;
-    t1 = jj_consume_token(STRING_LITERAL);
-    jj_consume_token(AT);
-    jj_consume_token(LBRACE);
-    label_3:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case DDOT:
-        ;
-        break;
-      default:
-        jj_la1[7] = jj_gen;
-        break label_3;
-      }
-      a = stringOpEasyRegexExpr();
-                                                                 list.add(a);
-    }
-    t2 = jj_consume_token(RBRACE);
-    {if (true) return new AstExprStringOp(t1, t2, t1.image, list);}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstEasyRegex stringOpEasyRegexExpr() throws ParseException {
-    SymbolTable st = new SymbolTable(null);
-    Token bang = null;
-    Token regex;
-    AstEasyRegex easyRegex = null;
-    AstFunctionBlock block = null;
-    jj_consume_token(DDOT);
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case BANG:
-      bang = jj_consume_token(BANG);
-      break;
-    default:
-      jj_la1[8] = jj_gen;
-      ;
-    }
-    regex = jj_consume_token(STRING_LITERAL);
-    jj_consume_token(DDOT);
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case LBRACE:
-      block = functionBlock(st);
-      break;
-    default:
-      jj_la1[9] = jj_gen;
-      ;
-    }
-        switch (regex.image.substring(1, regex.image.length() - 1)) {
-            case "Integer":
-                easyRegex = new AstEasyInteger(block);
-                break;
-            case "Char":
-                easyRegex = new AstEasyChar(block);
-                break;
-            default:
-                easyRegex = new AstEasyRegexCustom(regex.image, block);
-        }
-        if (bang != null)
-            easyRegex.isNegation = true;
-
-         {if (true) return easyRegex;}
-    throw new Error("Missing return statement in function");
-  }
-
-/** FIELD DECLARATION **/
-  final public Token type() throws ParseException {
-    Token type;
-    type = primitiveType();
-                            {if (true) return type;}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public Token primitiveType() throws ParseException {
-    Token t;
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case BOOLEAN:
-      t = jj_consume_token(BOOLEAN);
-      break;
-    case CHAR:
-      t = jj_consume_token(CHAR);
-      break;
-    case INTEGER:
-      t = jj_consume_token(INTEGER);
-      break;
-    case DOUBLE:
-      t = jj_consume_token(DOUBLE);
-      break;
-    case STRING:
-      t = jj_consume_token(STRING);
-      break;
-    default:
-      jj_la1[10] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
-                    {if (true) return t;}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstStatementVariableDeclaration variableDeclaration(SymbolTable st) throws ParseException {
-    Token type, end = null;
-    AstVariable var = null;
-    int dimensions = 0;
-    Set<Integer> syncChars = new HashSet<Integer>();
-    syncChars.add(NawkParserConstants.RETURN);
-    try {
-      type = type();
-      label_4:
-      while (true) {
-        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-        case LBRACKET:
-          ;
-          break;
-        default:
-          jj_la1[11] = jj_gen;
-          break label_4;
-        }
-        jj_consume_token(LBRACKET);
-        jj_consume_token(RBRACKET);
-                             dimensions++;
-      }
-      var = variableDeclarator(st);
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case SEMICOLON:
-        end = jj_consume_token(SEMICOLON);
-        break;
-      default:
-        jj_la1[12] = jj_gen;
-        missingSemicolon(type);
-      }
-        var.start = type;
-        var.dimensions = dimensions;
-        {if (true) return new AstStatementVariableDeclaration(type, var.end, type, var, dimensions, st);}
-    } catch (ParseException e) {
-    skipUntil(syncChars);
-    {if (true) return new AstStatementVariableDeclaration(null, null, null, null, dimensions, st);}
-    }
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstVariable variableDeclarator(SymbolTable st) throws ParseException {
-    AstExpr val = null;
-    AstVariable var;
-    Token id;
-    id = jj_consume_token(Ident);
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case ASSIGN:
-      jj_consume_token(ASSIGN);
-      val = arrayAndVariableInitializer(st);
-      break;
-    default:
-      jj_la1[13] = jj_gen;
-      ;
-    }
-        // type is at this point not known, therefore set it to null (must be set later)
-        var = new AstVariable(null, id, id);
-        var.symbolTable = st;
-        var.value = val;
-        {if (true) return var;}
-    throw new Error("Missing return statement in function");
-  }
-
-/**
-* int arr = {1, 2 , 3}; => 1 dim
-* int arr = {{1}, {2} , {3, 4}}; 2 dim
-* array initializing by allowing to put "normal" expressions and nested arrays
-*/
-  final public AstExpr arrayAndVariableInitializer(SymbolTable st) throws ParseException {
-    // set end token to null because not known
-    AstExpr val;
-    Token t1, t2, t3;
-    AstExpr e1 = null, e2 = null;
-    List<AstExpr> elements = new LinkedList<AstExpr>();
-    Set<Integer> syncChars = new HashSet<Integer>();
-    syncChars.add(NawkParserConstants.RBRACE);
-    try {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case LBRACE:
-        t1 = jj_consume_token(LBRACE);
+      try {
+        t1 = jj_consume_token(PRINT);
+        t2 = jj_consume_token(LPAREN);
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
         case PLUS:
         case PPLUS:
@@ -462,8 +218,338 @@ public class NawkParser implements NawkParserConstants {
         case CHAR_LTIERAL:
         case STRING_LITERAL:
         case Ident:
+          e = arrayAndVariableInitializer(st);
+          break;
+        default:
+          jj_la1[4] = jj_gen;
+          missingExpression(t2);
+        }
+        t3 = jj_consume_token(RPAREN);
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case SEMICOLON:
+          t4 = jj_consume_token(SEMICOLON);
+          break;
+        default:
+          jj_la1[5] = jj_gen;
+          missingSemicolon(t3);
+        }
+        {if (true) return new AstStatementPrint(t1, t4, e);}
+      } catch (ParseException ex) {
+    skipUntil(syncChars);
+    globalErrors.add(new SyntaxError(ex.getMessage(), t1, t4));
+    {if (true) return new AstStatementNone();}
+      }
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("printStatement");
+    }
+  }
+
+  final public AstStatement blockStatement(SymbolTable parentSt) throws ParseException {
+    trace_call("blockStatement");
+    try {
+    SymbolTable st = new SymbolTable(parentSt);
+    List<AstStatement> list = new LinkedList<AstStatement>();
+    Token t1, t2;
+    AstStatement a;
+      t1 = jj_consume_token(LBRACE);
+      label_2:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case PLUS:
+        case PPLUS:
+        case MINUS:
+        case MMINUS:
+        case BANG:
+        case LPAREN:
+        case LBRACE:
+        case DOUBLE:
+        case INTEGER:
+        case STRING:
+        case BOOLEAN:
+        case CHAR:
+        case TRUE:
+        case FALSE:
+        case PRINT:
+        case WHILE:
+        case IF:
+        case INTEGER_LITERAL:
+        case DOUBLE_LITERAL:
+        case CHAR_LTIERAL:
+        case STRING_LITERAL:
+        case Ident:
+          ;
+          break;
+        default:
+          jj_la1[6] = jj_gen;
+          break label_2;
+        }
+        a = statement(st);
+                                   list.add(a);
+      }
+      t2 = jj_consume_token(RBRACE);
+                                                                {if (true) return new AstStatementBlock(t1, t2, list);}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("blockStatement");
+    }
+  }
+
+  final public AstExpr exprStatement(SymbolTable st) throws ParseException {
+    trace_call("exprStatement");
+    try {
+    AstExpr e;
+      e = arrayAndVariableInitializer(st);
+      jj_consume_token(SEMICOLON);
+                                             {if (true) return e;}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("exprStatement");
+    }
+  }
+
+  final public AstExprStringOp stringOpExpr() throws ParseException {
+    trace_call("stringOpExpr");
+    try {
+    List<AstEasyRegex> list = new LinkedList<AstEasyRegex>();
+    AstEasyRegex a = null;
+    Token t1, t2;
+      t1 = jj_consume_token(STRING_LITERAL);
+      jj_consume_token(AT);
+      jj_consume_token(LBRACE);
+      label_3:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case DDOT:
+          ;
+          break;
+        default:
+          jj_la1[7] = jj_gen;
+          break label_3;
+        }
+        a = stringOpEasyRegexExpr();
+                                                                 list.add(a);
+      }
+      t2 = jj_consume_token(RBRACE);
+    {if (true) return new AstExprStringOp(t1, t2, t1.image, list);}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("stringOpExpr");
+    }
+  }
+
+  final public AstStatementWhile whileStatement(SymbolTable st) throws ParseException {
+    trace_call("whileStatement");
+    try {
+   AstExpr expr;
+   AstStatement stm;
+   Token start;
+      start = jj_consume_token(WHILE);
+      jj_consume_token(LPAREN);
+      expr = conditionalOrExpression(st);
+      jj_consume_token(RPAREN);
+      stm = blockStatement(st);
+                                                                                        {if (true) return new AstStatementWhile(start, expr, stm, st);}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("whileStatement");
+    }
+  }
+
+  final public AstStatementIf ifStatement(SymbolTable st) throws ParseException {
+    trace_call("ifStatement");
+    try {
+    Token start;
+    AstExpr expr;
+   AstStatement option1, option2 = null;
+      start = jj_consume_token(IF);
+      jj_consume_token(LPAREN);
+      expr = conditionalOrExpression(st);
+      jj_consume_token(RPAREN);
+      option1 = blockStatement(st);
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case ELSE:
+        jj_consume_token(ELSE);
+        option2 = blockStatement(st);
+        break;
+      default:
+        jj_la1[8] = jj_gen;
+        ;
+      }
+        {if (true) return new AstStatementIf(start, expr, option1, option2);}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("ifStatement");
+    }
+  }
+
+  final public AstEasyRegex stringOpEasyRegexExpr() throws ParseException {
+    trace_call("stringOpEasyRegexExpr");
+    try {
+    SymbolTable st = new SymbolTable(null);
+    Token bang = null;
+    Token regex;
+    AstEasyRegex easyRegex = null;
+    AstFunctionBlock block = null;
+      jj_consume_token(DDOT);
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case BANG:
+        bang = jj_consume_token(BANG);
+        break;
+      default:
+        jj_la1[9] = jj_gen;
+        ;
+      }
+      regex = jj_consume_token(STRING_LITERAL);
+      jj_consume_token(DDOT);
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case LBRACE:
+        block = functionBlock(st);
+        break;
+      default:
+        jj_la1[10] = jj_gen;
+        ;
+      }
+        switch (regex.image.substring(1, regex.image.length() - 1)) {
+            case "Integer":
+                easyRegex = new AstEasyInteger(block);
+                break;
+            case "Char":
+                easyRegex = new AstEasyChar(block);
+                break;
+            default:
+                easyRegex = new AstEasyRegexCustom(regex.image, block);
+        }
+        if (bang != null)
+            easyRegex.isNegation = true;
+
+         {if (true) return easyRegex;}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("stringOpEasyRegexExpr");
+    }
+  }
+
+/** FIELD DECLARATION **/
+  final public Token type() throws ParseException {
+    trace_call("type");
+    try {
+    Token type;
+      type = primitiveType();
+                            {if (true) return type;}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("type");
+    }
+  }
+
+  final public Token primitiveType() throws ParseException {
+    trace_call("primitiveType");
+    try {
+    Token t;
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case BOOLEAN:
+        t = jj_consume_token(BOOLEAN);
+        break;
+      case CHAR:
+        t = jj_consume_token(CHAR);
+        break;
+      case INTEGER:
+        t = jj_consume_token(INTEGER);
+        break;
+      case DOUBLE:
+        t = jj_consume_token(DOUBLE);
+        break;
+      case STRING:
+        t = jj_consume_token(STRING);
+        break;
+      default:
+        jj_la1[11] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
+      }
+                    {if (true) return t;}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("primitiveType");
+    }
+  }
+
+  final public AstStatementVariableDeclaration variableDeclaration(SymbolTable st) throws ParseException {
+    trace_call("variableDeclaration");
+    try {
+    Token type, end = null;
+    AstExpr val = null;
+    int dimensions = 0;
+    Token id;
+    Set<Integer> syncChars = new HashSet<Integer>();
+    syncChars.add(NawkParserConstants.RETURN);
+      try {
+        type = type();
+        label_4:
+        while (true) {
+          switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+          case LBRACKET:
+            ;
+            break;
+          default:
+            jj_la1[12] = jj_gen;
+            break label_4;
+          }
+          jj_consume_token(LBRACKET);
+          jj_consume_token(RBRACKET);
+                             dimensions++;
+        }
+        id = jj_consume_token(Ident);
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case ASSIGN:
+          jj_consume_token(ASSIGN);
+          val = arrayAndVariableInitializer(st);
+          break;
+        default:
+          jj_la1[13] = jj_gen;
+          ;
+        }
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case SEMICOLON:
+          end = jj_consume_token(SEMICOLON);
+          break;
+        default:
+          jj_la1[14] = jj_gen;
+          missingSemicolon(type);
+        }
+        {if (true) return new AstStatementVariableDeclaration(type, end, type, id, val, dimensions, st);}
+      } catch (ParseException e) {
+    skipUntil(syncChars);
+    {if (true) return new AstStatementVariableDeclaration(null, null, null, null, val, dimensions, st);}
+      }
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("variableDeclaration");
+    }
+  }
+
+/**
+* int arr = {1, 2 , 3}; => 1 dim
+* int arr = {{1}, {2} , {3, 4}}; 2 dim
+* array initializing by allowing to put "normal" expressions and nested arrays
+*/
+  final public AstExpr arrayAndVariableInitializer(SymbolTable st) throws ParseException {
+    trace_call("arrayAndVariableInitializer");
+    try {
+    // set end token to null because not known
+    AstExpr val;
+    Token t1, t2, t3;
+    AstExpr e1 = null, e2 = null;
+    List<AstExpr> elements = new LinkedList<AstExpr>();
+    Set<Integer> syncChars = new HashSet<Integer>();
+    syncChars.add(NawkParserConstants.RBRACE);
+      try {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case LBRACE:
+          t1 = jj_consume_token(LBRACE);
           e1 = arrayAndVariableInitializer(st);
-                                                       elements.add(e1);
+                                                     elements.add(e1);
           label_5:
           while (true) {
             switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -471,64 +557,64 @@ public class NawkParser implements NawkParserConstants {
               ;
               break;
             default:
-              jj_la1[14] = jj_gen;
+              jj_la1[15] = jj_gen;
               break label_5;
             }
             t3 = jj_consume_token(COMMA);
             e2 = arrayAndVariableInitializer(st);
         elements.add(e2);
           }
-          break;
-        default:
-          jj_la1[15] = jj_gen;
-          ;
-        }
-        t2 = jj_consume_token(RBRACE);
+          t2 = jj_consume_token(RBRACE);
         val = new AstExprArrayInit(t1, t2, Type.VOID, elements, new SymbolTable(st));
         if (e1 != null) {
             if (e1 instanceof AstExprArrayInit) // array of arrays
                 ((AstExprArrayInit) val).dimensions += ((AstExprArrayInit) e1).dimensions;
         }
-        break;
-      default:
-        jj_la1[16] = jj_gen;
-        if (jj_2_4(3)) {
-          val = stringOpExpr();
-        } else {
-          switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-          case PLUS:
-          case PPLUS:
-          case MINUS:
-          case MMINUS:
-          case BANG:
-          case LPAREN:
-          case TRUE:
-          case FALSE:
-          case INTEGER_LITERAL:
-          case DOUBLE_LITERAL:
-          case CHAR_LTIERAL:
-          case STRING_LITERAL:
-          case Ident:
-            val = expr(st);
-            break;
-          default:
-            jj_la1[17] = jj_gen;
-            jj_consume_token(-1);
-            throw new ParseException();
+          break;
+        default:
+          jj_la1[16] = jj_gen;
+          if (jj_2_4(3)) {
+            val = stringOpExpr();
+          } else {
+            switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+            case PLUS:
+            case PPLUS:
+            case MINUS:
+            case MMINUS:
+            case BANG:
+            case LPAREN:
+            case TRUE:
+            case FALSE:
+            case INTEGER_LITERAL:
+            case DOUBLE_LITERAL:
+            case CHAR_LTIERAL:
+            case STRING_LITERAL:
+            case Ident:
+              val = expr(st);
+              break;
+            default:
+              jj_la1[17] = jj_gen;
+              jj_consume_token(-1);
+              throw new ParseException();
+            }
           }
         }
-      }
                       {if (true) return val;}
-    } catch (ParseException ex) {
+      } catch (ParseException ex) {
     skipUntil(syncChars);
     System.out.println(ex.getMessage());
     {if (true) return new ValueInteger(0);}
-    }
+      }
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("arrayAndVariableInitializer");
+    }
   }
 
 /** FUNCTION DECLARATION **/
   final public AstFunctionDeclaration functionDeclaration() throws ParseException {
+    trace_call("functionDeclaration");
+    try {
     // No Parent table, because a function can not access outer scope
     SymbolTable st = new SymbolTable(null);
     Token t;
@@ -536,141 +622,157 @@ public class NawkParser implements NawkParserConstants {
     AstFunctionBlock block;
     AstVariable a;
     List<AstVariable> params = new LinkedList<AstVariable>();
-    t = resultType();
-    i = jj_consume_token(Ident);
-    jj_consume_token(LPAREN);
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case DOUBLE:
-    case INTEGER:
-    case STRING:
-    case BOOLEAN:
-    case CHAR:
-      a = functionParameter(st);
-                                                                   params.add(a);
-      label_6:
-      while (true) {
-        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-        case COMMA:
-          ;
-          break;
-        default:
-          jj_la1[18] = jj_gen;
-          break label_6;
-        }
-        jj_consume_token(COMMA);
-        a = functionParameter(st);
-                                                                                                                      params.add(a);
-      }
-      break;
-    default:
-      jj_la1[19] = jj_gen;
-      ;
-    }
-    jj_consume_token(RPAREN);
-    block = functionBlock(st);
-        {if (true) return new AstFunctionDeclaration(t, block.end, i, st, block, params);}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public Token resultType() throws ParseException {
-                      Token t;
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case VOID:
-      t = jj_consume_token(VOID);
-      break;
-    case DOUBLE:
-    case INTEGER:
-    case STRING:
-    case BOOLEAN:
-    case CHAR:
-      t = type();
-      break;
-    default:
-      jj_la1[20] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
-                                {if (true) return t;}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstVariable functionParameter(SymbolTable st) throws ParseException {
-    AstVariable a;
-    Token type, id;
-    int dimensions = 0;
-    type = primitiveType();
-    label_7:
-    while (true) {
+      t = resultType();
+      i = jj_consume_token(Ident);
+      jj_consume_token(LPAREN);
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case LBRACKET:
-        ;
-        break;
-      default:
-        jj_la1[21] = jj_gen;
-        break label_7;
-      }
-      jj_consume_token(LBRACKET);
-      jj_consume_token(RBRACKET);
-                                      dimensions++;
-    }
-    id = jj_consume_token(Ident);
-        a = new AstVariable(type, id, id);
-        a.dimensions = dimensions;
-        a.symbolTable = st;
-        {if (true) return a;}
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstFunctionBlock functionBlock(SymbolTable st) throws ParseException {
-    AstExpr returnValue = null;
-    Token t1, t2;
-    List<AstStatement> list = new LinkedList<AstStatement>();
-    AstStatement a;
-    t1 = jj_consume_token(LBRACE);
-    label_8:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case PLUS:
-      case PPLUS:
-      case MINUS:
-      case MMINUS:
-      case BANG:
-      case LPAREN:
-      case LBRACE:
-      case SEMICOLON:
       case DOUBLE:
       case INTEGER:
       case STRING:
       case BOOLEAN:
       case CHAR:
-      case TRUE:
-      case FALSE:
-      case PRINT:
-      case INTEGER_LITERAL:
-      case DOUBLE_LITERAL:
-      case CHAR_LTIERAL:
-      case STRING_LITERAL:
-      case Ident:
-        ;
+        a = functionParameter(st);
+                                                                   params.add(a);
+        label_6:
+        while (true) {
+          switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+          case COMMA:
+            ;
+            break;
+          default:
+            jj_la1[18] = jj_gen;
+            break label_6;
+          }
+          jj_consume_token(COMMA);
+          a = functionParameter(st);
+                                                                                                                      params.add(a);
+        }
         break;
       default:
-        jj_la1[22] = jj_gen;
-        break label_8;
+        jj_la1[19] = jj_gen;
+        ;
       }
-      a = statement(st);
+      jj_consume_token(RPAREN);
+      block = functionBlock(st);
+        {if (true) return new AstFunctionDeclaration(t, block.end, i, st, block, params);}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("functionDeclaration");
+    }
+  }
+
+  final public Token resultType() throws ParseException {
+    trace_call("resultType");
+    try {
+                      Token t;
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case VOID:
+        t = jj_consume_token(VOID);
+        break;
+      case DOUBLE:
+      case INTEGER:
+      case STRING:
+      case BOOLEAN:
+      case CHAR:
+        t = type();
+        break;
+      default:
+        jj_la1[20] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
+      }
+                                {if (true) return t;}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("resultType");
+    }
+  }
+
+  final public AstVariable functionParameter(SymbolTable st) throws ParseException {
+    trace_call("functionParameter");
+    try {
+    AstVariable a;
+    Token type, id;
+    int dimensions = 0;
+      type = primitiveType();
+      label_7:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case LBRACKET:
+          ;
+          break;
+        default:
+          jj_la1[21] = jj_gen;
+          break label_7;
+        }
+        jj_consume_token(LBRACKET);
+        jj_consume_token(RBRACKET);
+                                      dimensions++;
+      }
+      id = jj_consume_token(Ident);
+        a = new AstVariable(type, id, id);
+        a.dimensions = dimensions;
+        a.symbolTable = st;
+        {if (true) return a;}
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("functionParameter");
+    }
+  }
+
+  final public AstFunctionBlock functionBlock(SymbolTable st) throws ParseException {
+    trace_call("functionBlock");
+    try {
+    AstExpr returnValue = null;
+    Token t1, t2;
+    List<AstStatement> list = new LinkedList<AstStatement>();
+    AstStatement a;
+      t1 = jj_consume_token(LBRACE);
+      label_8:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case PLUS:
+        case PPLUS:
+        case MINUS:
+        case MMINUS:
+        case BANG:
+        case LPAREN:
+        case LBRACE:
+        case DOUBLE:
+        case INTEGER:
+        case STRING:
+        case BOOLEAN:
+        case CHAR:
+        case TRUE:
+        case FALSE:
+        case PRINT:
+        case WHILE:
+        case IF:
+        case INTEGER_LITERAL:
+        case DOUBLE_LITERAL:
+        case CHAR_LTIERAL:
+        case STRING_LITERAL:
+        case Ident:
+          ;
+          break;
+        default:
+          jj_la1[22] = jj_gen;
+          break label_8;
+        }
+        a = statement(st);
                                    list.add(a);
-    }
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case RETURN:
-      jj_consume_token(RETURN);
-      returnValue = expr(st);
-      jj_consume_token(SEMICOLON);
-      break;
-    default:
-      jj_la1[23] = jj_gen;
-      ;
-    }
-    t2 = jj_consume_token(RBRACE);
+      }
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case RETURN:
+        jj_consume_token(RETURN);
+        returnValue = expr(st);
+        jj_consume_token(SEMICOLON);
+        break;
+      default:
+        jj_la1[23] = jj_gen;
+        ;
+      }
+      t2 = jj_consume_token(RBRACE);
         AstFunctionBlock afb = new AstFunctionBlock(t1, t2, list, returnValue);
         // give reference to symbol table so that identifiers can be evaluated at runtime. Most needed for the
         // string-operator and special array expressions because the "this" values is evaluated at runtime
@@ -678,194 +780,240 @@ public class NawkParser implements NawkParserConstants {
 
         {if (true) return afb;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("functionBlock");
+    }
   }
 
 /** EXPRESSIONS **/
   final public AstExpr expr(SymbolTable st) throws ParseException {
+    trace_call("expr");
+    try {
     AstExpr left, right = null;
     Token op = null;
-    // define variable assignment in expression rule, since expr can evaluate to an identifier
-        left = conditionalOrExpression(st);
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case ASSIGN:
-      jj_consume_token(ASSIGN);
-      right = expr(st);
-      break;
-    default:
-      jj_la1[24] = jj_gen;
-      ;
-    }
-        if (right != null) {
-            {if (true) return new AstAssigment(left.start, right.end, left, right, st);}
+    Token id;
+    AstExpr val;
+      if (jj_2_5(3)) {
+        id = jj_consume_token(Ident);
+        jj_consume_token(ASSIGN);
+        val = arrayAndVariableInitializer(st);
+                                                                            left = new AstAssigment(id, id, id, val, st);
+      } else {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case PLUS:
+        case PPLUS:
+        case MINUS:
+        case MMINUS:
+        case BANG:
+        case LPAREN:
+        case TRUE:
+        case FALSE:
+        case INTEGER_LITERAL:
+        case DOUBLE_LITERAL:
+        case CHAR_LTIERAL:
+        case STRING_LITERAL:
+        case Ident:
+          left = conditionalOrExpression(st);
+          break;
+        default:
+          jj_la1[24] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
         }
+      }
         left.end = left.start;
         {if (true) return left;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("expr");
+    }
   }
 
   final public AstExpr conditionalOrExpression(SymbolTable st) throws ParseException {
+    trace_call("conditionalOrExpression");
+    try {
      AstExpr left, right = null;
      Token op = null;
-    left = conditionalAndExpression(st);
-    label_9:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case OR:
-        ;
-        break;
-      default:
-        jj_la1[25] = jj_gen;
-        break label_9;
-      }
-      op = jj_consume_token(OR);
-      right = conditionalAndExpression(st);
-        Type baseType = Helper.validateTypesForConditionalOp(left, right, op);
-        AstExpr a =  new AstExprConditionalOr(left, right, op, baseType);
+      left = conditionalAndExpression(st);
+      label_9:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case OR:
+          ;
+          break;
+        default:
+          jj_la1[25] = jj_gen;
+          break label_9;
+        }
+        op = jj_consume_token(OR);
+        right = conditionalAndExpression(st);
+        AstExpr a =  new AstExprConditionalOr(left, right, op);
         a.symbolTable = st;
-    }
+      }
           {if (true) return left;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("conditionalOrExpression");
+    }
   }
 
   final public AstExpr conditionalAndExpression(SymbolTable st) throws ParseException {
+    trace_call("conditionalAndExpression");
+    try {
      AstExpr left, right = null;
      Token op = null;
-    left = equalityExpression(st);
-    label_10:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case AND:
-        ;
-        break;
-      default:
-        jj_la1[26] = jj_gen;
-        break label_10;
-      }
-      op = jj_consume_token(AND);
-      right = equalityExpression(st);
-        Type baseType = Helper.validateTypesForConditionalOp(left, right, op);
-        AstExpr a = new AstExprConditionalAnd(left, right, op, baseType);
+      left = equalityExpression(st);
+      label_10:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case AND:
+          ;
+          break;
+        default:
+          jj_la1[26] = jj_gen;
+          break label_10;
+        }
+        op = jj_consume_token(AND);
+        right = equalityExpression(st);
+        AstExpr a = new AstExprConditionalAnd(left, right, op);
         // left and right already have a symbol table. Got in equality expression
         a.symbolTable = st;
-    }
+      }
           {if (true) return left;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("conditionalAndExpression");
+    }
   }
 
   final public AstExpr equalityExpression(SymbolTable st) throws ParseException {
+    trace_call("equalityExpression");
+    try {
      AstExpr left, right = null;
      Token op = null;
-    left = relationalExpression(st);
-    label_11:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case EQ:
-      case NE:
-        ;
-        break;
-      default:
-        jj_la1[27] = jj_gen;
-        break label_11;
-      }
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case EQ:
-        op = jj_consume_token(EQ);
-        break;
-      case NE:
-        op = jj_consume_token(NE);
-        break;
-      default:
-        jj_la1[28] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
-      right = relationalExpression(st);
-        Type typeBase = Helper.validateTypes(left, right, op);
-        left = new AstExprEquality(left, right, op, typeBase);
+      left = relationalExpression(st);
+      label_11:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case EQ:
+        case NE:
+          ;
+          break;
+        default:
+          jj_la1[27] = jj_gen;
+          break label_11;
+        }
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case EQ:
+          op = jj_consume_token(EQ);
+          break;
+        case NE:
+          op = jj_consume_token(NE);
+          break;
+        default:
+          jj_la1[28] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
+        }
+        right = relationalExpression(st);
+        left = new AstExprEquality(left, right, op);
         left.symbolTable = st;
         right.symbolTable = st;
-    }
+      }
            {if (true) return left;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("equalityExpression");
+    }
   }
 
   final public AstExpr relationalExpression(SymbolTable st) throws ParseException {
+    trace_call("relationalExpression");
+    try {
      AstExpr left, right = null;
      Token op = null;
-    left = additiveExpression(st);
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case GT:
-    case LT:
-    case LE:
-    case GE:
+      left = additiveExpression(st);
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case LT:
-        op = jj_consume_token(LT);
-        break;
       case GT:
-        op = jj_consume_token(GT);
-        break;
+      case LT:
       case LE:
-        op = jj_consume_token(LE);
-        break;
       case GE:
-        op = jj_consume_token(GE);
-        break;
-      default:
-        jj_la1[29] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
-      right = additiveExpression(st);
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case LT:
+          op = jj_consume_token(LT);
+          break;
+        case GT:
+          op = jj_consume_token(GT);
+          break;
+        case LE:
+          op = jj_consume_token(LE);
+          break;
+        case GE:
+          op = jj_consume_token(GE);
+          break;
+        default:
+          jj_la1[29] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
+        }
+        right = additiveExpression(st);
         // only allowed between numeric values
         Type typeBase = Helper.validateTypes(left, right, op);
-        left = new AstExprRelational(left, right, op, typeBase);
+        left = new AstExprRelational(left, right, op);
         left.symbolTable = st;
         right.symbolTable = st;
-      break;
-    default:
-      jj_la1[30] = jj_gen;
-      ;
-    }
+        break;
+      default:
+        jj_la1[30] = jj_gen;
+        ;
+      }
           {if (true) return left;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("relationalExpression");
+    }
   }
 
   final public AstExpr additiveExpression(SymbolTable st) throws ParseException {
+    trace_call("additiveExpression");
+    try {
      AstExpr left, right = null;
      Token op = null;
-    left = multiplicativeExpression(st);
-    label_12:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case PLUS:
-      case MINUS:
-        ;
-        break;
-      default:
-        jj_la1[31] = jj_gen;
-        break label_12;
-      }
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case PLUS:
-        op = jj_consume_token(PLUS);
-        break;
-      case MINUS:
-        op = jj_consume_token(MINUS);
-        break;
-      default:
-        jj_la1[32] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
-      right = multiplicativeExpression(st);
+      left = multiplicativeExpression(st);
+      label_12:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case PLUS:
+        case MINUS:
+          ;
+          break;
+        default:
+          jj_la1[31] = jj_gen;
+          break label_12;
+        }
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case PLUS:
+          op = jj_consume_token(PLUS);
+          break;
+        case MINUS:
+          op = jj_consume_token(MINUS);
+          break;
+        default:
+          jj_la1[32] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
+        }
+        right = multiplicativeExpression(st);
         Type baseType = Helper.validateTypesForAdditiveOp(left, right, op);
         left = new AstExprAdditive(left, right, op, baseType);
         left.symbolTable = st;
         right.symbolTable = st;
-    }
+      }
           {if (true) return left;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("additiveExpression");
+    }
   }
 
 /**
@@ -875,301 +1023,356 @@ public class NawkParser implements NawkParserConstants {
 * Not OK:   Arithmetic with non-numeric values (string, boolean)
 */
   final public AstExpr multiplicativeExpression(SymbolTable st) throws ParseException {
+    trace_call("multiplicativeExpression");
+    try {
    AstExpr left, right = null;
    Token op = null;
-    left = unaryExpression(st);
-    label_13:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case STAR:
-      case SLASH:
-      case MOD:
-        ;
-        break;
-      default:
-        jj_la1[33] = jj_gen;
-        break label_13;
-      }
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case STAR:
-        op = jj_consume_token(STAR);
-        break;
-      case SLASH:
-        op = jj_consume_token(SLASH);
-        break;
-      case MOD:
-        op = jj_consume_token(MOD);
-        break;
-      default:
-        jj_la1[34] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
-      right = unaryExpression(st);
+      left = unaryExpression(st);
+      label_13:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case STAR:
+        case SLASH:
+        case MOD:
+          ;
+          break;
+        default:
+          jj_la1[33] = jj_gen;
+          break label_13;
+        }
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case STAR:
+          op = jj_consume_token(STAR);
+          break;
+        case SLASH:
+          op = jj_consume_token(SLASH);
+          break;
+        case MOD:
+          op = jj_consume_token(MOD);
+          break;
+        default:
+          jj_la1[34] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
+        }
+        right = unaryExpression(st);
         // only allowed between numeric values
         Type typeBase = Helper.validateTypes(left, right, op);
         left = new AstExprMultiplicative(left, right, op, typeBase);
         left.symbolTable = st;
         right.symbolTable = st;
-    }
+      }
            {if (true) return left;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("multiplicativeExpression");
+    }
   }
 
   final public AstExpr unaryExpression(SymbolTable st) throws ParseException {
+    trace_call("unaryExpression");
+    try {
    Token op = null;
    AstExpr expr, a;
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case PLUS:
-    case PPLUS:
-    case MINUS:
-    case MMINUS:
-    case BANG:
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case PLUS:
-        op = jj_consume_token(PLUS);
-        break;
-      case MINUS:
-        op = jj_consume_token(MINUS);
-        break;
       case PPLUS:
-        op = jj_consume_token(PPLUS);
-        break;
+      case MINUS:
       case MMINUS:
-        op = jj_consume_token(MMINUS);
-        break;
       case BANG:
-        op = jj_consume_token(BANG);
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case PLUS:
+          op = jj_consume_token(PLUS);
+          break;
+        case MINUS:
+          op = jj_consume_token(MINUS);
+          break;
+        case PPLUS:
+          op = jj_consume_token(PPLUS);
+          break;
+        case MMINUS:
+          op = jj_consume_token(MMINUS);
+          break;
+        case BANG:
+          op = jj_consume_token(BANG);
+          break;
+        default:
+          jj_la1[35] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
+        }
         break;
       default:
-        jj_la1[35] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
+        jj_la1[36] = jj_gen;
+        ;
       }
-      break;
-    default:
-      jj_la1[36] = jj_gen;
-      ;
-    }
-    expr = primaryExpression(st);
+      expr = primaryExpression(st);
                                                                                            a =  new AstExprUnary(op, expr); a.symbolTable = st; {if (true) return a;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("unaryExpression");
+    }
   }
 
   final public AstExpr primaryExpression(SymbolTable st) throws ParseException {
+    trace_call("primaryExpression");
+    try {
     AstExpr lit;
     AstExpr suffix = null;
     AstExpr a;
-    lit = literal(st);
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case LPAREN:
-    case LBRACKET:
-      suffix = primarySuffix(st, lit);
-      break;
-    default:
-      jj_la1[37] = jj_gen;
-      ;
-    }
+      lit = literal(st);
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case LPAREN:
+      case LBRACKET:
+        suffix = primarySuffix(st, lit);
+        break;
+      default:
+        jj_la1[37] = jj_gen;
+        ;
+      }
                                                          a = new AstExprPrimary(lit, suffix); a.symbolTable = st; {if (true) return a;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("primaryExpression");
+    }
   }
 
   final public AstExpr primarySuffix(SymbolTable st, AstExpr identifier) throws ParseException {
+    trace_call("primarySuffix");
+    try {
     AstExpr e = null, p = null;
     // used when its an function call
     List<AstExpr> params = new LinkedList<AstExpr>();
     List<AstExpr> indices = new LinkedList<AstExpr>();
     Token start, end;
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case LBRACKET:
-      start = jj_consume_token(LBRACKET);
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case PLUS:
-      case PPLUS:
-      case MINUS:
-      case MMINUS:
-      case BANG:
-      case LPAREN:
-      case TRUE:
-      case FALSE:
-      case INTEGER_LITERAL:
-      case DOUBLE_LITERAL:
-      case CHAR_LTIERAL:
-      case STRING_LITERAL:
-      case Ident:
-        e = expr(st);
-                                indices.add(e);
-        break;
-      default:
-        jj_la1[38] = jj_gen;
-        ;
-      }
-      end = jj_consume_token(RBRACKET);
-      label_14:
-      while (true) {
+      case LBRACKET:
+        start = jj_consume_token(LBRACKET);
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-        case LBRACKET:
-          ;
+        case PLUS:
+        case PPLUS:
+        case MINUS:
+        case MMINUS:
+        case BANG:
+        case LPAREN:
+        case TRUE:
+        case FALSE:
+        case INTEGER_LITERAL:
+        case DOUBLE_LITERAL:
+        case CHAR_LTIERAL:
+        case STRING_LITERAL:
+        case Ident:
+          e = expr(st);
+                                indices.add(e);
           break;
         default:
-          jj_la1[39] = jj_gen;
-          break label_14;
+          jj_la1[38] = jj_gen;
+          ;
         }
-        jj_consume_token(LBRACKET);
-        e = expr(st);
-                                                                                  indices.add(e);
         end = jj_consume_token(RBRACKET);
-      }
-                                                                                                                   // Array access
-        // declaration is set after semantic analysis
-        {if (true) return new AstExprArrayCall(start, end, null, indices, identifier, st);}
-      break;
-    case LPAREN:
-      start = jj_consume_token(LPAREN);
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case PLUS:
-      case PPLUS:
-      case MINUS:
-      case MMINUS:
-      case BANG:
-      case LPAREN:
-      case LBRACE:
-      case TRUE:
-      case FALSE:
-      case INTEGER_LITERAL:
-      case DOUBLE_LITERAL:
-      case CHAR_LTIERAL:
-      case STRING_LITERAL:
-      case Ident:
-        e = arrayAndVariableInitializer(st);
-                                                       params.add(e);
-        label_15:
+        label_14:
         while (true) {
           switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-          case COMMA:
+          case LBRACKET:
             ;
             break;
           default:
-            jj_la1[40] = jj_gen;
-            break label_15;
+            jj_la1[39] = jj_gen;
+            break label_14;
           }
-          jj_consume_token(COMMA);
-          e = arrayAndVariableInitializer(st);
-                                                                                                                   params.add(e);
+          jj_consume_token(LBRACKET);
+          e = expr(st);
+                                                                                  indices.add(e);
+          end = jj_consume_token(RBRACKET);
         }
+                                                                                                                   // Array access
+        // declaration is set after semantic analysis
+        {if (true) return new AstExprArrayCall(start, end, null, indices, identifier, st);}
         break;
-      default:
-        jj_la1[41] = jj_gen;
-        ;
-      }
-      end = jj_consume_token(RPAREN);
+      case LPAREN:
+        start = jj_consume_token(LPAREN);
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case PLUS:
+        case PPLUS:
+        case MINUS:
+        case MMINUS:
+        case BANG:
+        case LPAREN:
+        case LBRACE:
+        case TRUE:
+        case FALSE:
+        case INTEGER_LITERAL:
+        case DOUBLE_LITERAL:
+        case CHAR_LTIERAL:
+        case STRING_LITERAL:
+        case Ident:
+          e = arrayAndVariableInitializer(st);
+                                                       params.add(e);
+          label_15:
+          while (true) {
+            switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+            case COMMA:
+              ;
+              break;
+            default:
+              jj_la1[40] = jj_gen;
+              break label_15;
+            }
+            jj_consume_token(COMMA);
+            e = arrayAndVariableInitializer(st);
+                                                                                                                   params.add(e);
+          }
+          break;
+        default:
+          jj_la1[41] = jj_gen;
+          ;
+        }
+        end = jj_consume_token(RPAREN);
                                                                                                                                                      // Function Call
         {if (true) return new AstExprFunctionCall(start, end, identifier, null, params, st);}
-      break;
-    default:
-      jj_la1[42] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
-    throw new Error("Missing return statement in function");
-  }
-
-  final public AstExpr literal(SymbolTable st) throws ParseException {
-    Token t;
-    // User intended type for the variable
-    AstExpr literal;
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case INTEGER_LITERAL:
-      t = jj_consume_token(INTEGER_LITERAL);
-                              literal = new AstLiteralInt(t);
-      break;
-    case DOUBLE_LITERAL:
-      t = jj_consume_token(DOUBLE_LITERAL);
-                              literal = new AstLiteralDouble(t);
-      break;
-    case CHAR_LTIERAL:
-      t = jj_consume_token(CHAR_LTIERAL);
-                              literal = new AstLiteralChar(t);
-      break;
-    case STRING_LITERAL:
-      t = jj_consume_token(STRING_LITERAL);
-                              literal = new AstLiteralString(t);
-      break;
-    case TRUE:
-    case FALSE:
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case TRUE:
-        t = jj_consume_token(TRUE);
-        break;
-      case FALSE:
-        t = jj_consume_token(FALSE);
         break;
       default:
-        jj_la1[43] = jj_gen;
+        jj_la1[42] = jj_gen;
         jj_consume_token(-1);
         throw new ParseException();
       }
-                                    literal = new AstLiteralBoolean(t);
-      break;
-    case Ident:
-      t = jj_consume_token(Ident);
-                    literal = new AstLiteralIdent(t, st);
-      break;
-    case LPAREN:
-      jj_consume_token(LPAREN);
-      literal = expr(st);
-      jj_consume_token(RPAREN);
-      break;
-    default:
-      jj_la1[44] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
+    throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("primarySuffix");
     }
+  }
+
+  final public AstExpr literal(SymbolTable st) throws ParseException {
+    trace_call("literal");
+    try {
+    Token t;
+    // User intended type for the variable
+    AstExpr literal;
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case INTEGER_LITERAL:
+        t = jj_consume_token(INTEGER_LITERAL);
+                              literal = new AstLiteralInt(t);
+        break;
+      case DOUBLE_LITERAL:
+        t = jj_consume_token(DOUBLE_LITERAL);
+                              literal = new AstLiteralDouble(t);
+        break;
+      case CHAR_LTIERAL:
+        t = jj_consume_token(CHAR_LTIERAL);
+                              literal = new AstLiteralChar(t);
+        break;
+      case STRING_LITERAL:
+        t = jj_consume_token(STRING_LITERAL);
+                              literal = new AstLiteralString(t);
+        break;
+      case TRUE:
+      case FALSE:
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case TRUE:
+          t = jj_consume_token(TRUE);
+          break;
+        case FALSE:
+          t = jj_consume_token(FALSE);
+          break;
+        default:
+          jj_la1[43] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
+        }
+                                    literal = new AstLiteralBoolean(t);
+        break;
+      case Ident:
+        t = jj_consume_token(Ident);
+                    literal = new AstLiteralIdent(t, st);
+        break;
+      case LPAREN:
+        jj_consume_token(LPAREN);
+        literal = expr(st);
+        jj_consume_token(RPAREN);
+        break;
+      default:
+        jj_la1[44] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
+      }
                                    literal.symbolTable = st; {if (true) return literal;}
     throw new Error("Missing return statement in function");
+    } finally {
+      trace_return("literal");
+    }
   }
 
   void skipUntil(Set<Integer> kindSet) throws ParseException {
+    trace_call("skipUntil");
+    try {
 //    ParseException e = generateParseException();
 //    System.out.println(e.toString());
     Token t;
     do {
         t = getNextToken();
     } while (!kindSet.contains(t.kind));
+    } finally {
+      trace_return("skipUntil");
+    }
   }
 
   void missingSemicolon(Token t) throws ParseException {
+    trace_call("missingSemicolon");
+    try {
     String msg = String.format("missing ';' after '%s'.", t.image);
     System.out.println(msg);
     globalErrors.add(new SyntaxError(msg, t, t));
+    } finally {
+      trace_return("missingSemicolon");
+    }
   }
 
   void missingSemicolonString(String t, Token start) throws ParseException {
+    trace_call("missingSemicolonString");
+    try {
     String msg = String.format("missing ';' after '%s'.", t);
     System.out.println(msg);
     globalErrors.add(new SyntaxError(msg, start, start));
+    } finally {
+      trace_return("missingSemicolonString");
+    }
   }
 
   void missingExpression(Token t) throws ParseException {
+    trace_call("missingExpression");
+    try {
 //    ParseException e = generateParseException();
     String msg = String.format("missing an expression near '%s'.", t.image);
     System.out.println(msg);
     globalErrors.add(new SyntaxError(msg, t, t));
+    } finally {
+      trace_return("missingExpression");
+    }
   }
 
   void missingDeclarator(Token t) throws ParseException {
+    trace_call("missingDeclarator");
+    try {
 //    ParseException e = generateParseException();
     String msg = String.format("missing an declarator after '%s'.", t.image);
     System.out.println(msg);
     globalErrors.add(new SyntaxError(msg, t, t));
+    } finally {
+      trace_return("missingDeclarator");
+    }
   }
 
   void missingArrayComma(Token t) throws ParseException {
+    trace_call("missingArrayComma");
+    try {
     ParseException e = generateParseException();
     String msg = String.format("missing an ',' near '%s'.", t.image);
     System.out.println(msg);
     globalErrors.add(new SyntaxError(msg, t, t));
     throw e;
+    } finally {
+      trace_return("missingArrayComma");
+    }
   }
 
   private boolean jj_2_1(int xla) {
@@ -1200,56 +1403,101 @@ public class NawkParser implements NawkParserConstants {
     finally { jj_save(3, xla); }
   }
 
-  private boolean jj_3R_23() {
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_28()) { jj_scanpos = xsp; break; }
-    }
+  private boolean jj_2_5(int xla) {
+    jj_la = xla; jj_lastpos = jj_scanpos = token;
+    try { return !jj_3_5(); }
+    catch(LookaheadSuccess ls) { return true; }
+    finally { jj_save(4, xla); }
+  }
+
+  private boolean jj_3R_33() {
+    if (jj_scan_token(LBRACKET)) return true;
     return false;
   }
 
-  private boolean jj_3R_35() {
-    if (jj_3R_24()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_45() {
+  private boolean jj_3R_54() {
     if (jj_scan_token(COMMA)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_17() {
-    if (jj_scan_token(LBRACE)) return true;
-    if (jj_3R_23()) return true;
-    if (jj_scan_token(RBRACE)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_26() {
-    if (jj_scan_token(PRINT)) return true;
-    if (jj_scan_token(LPAREN)) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_35()) {
-    jj_scanpos = xsp;
-    if (jj_3R_36()) return true;
-    }
-    return false;
-  }
-
-  private boolean jj_3R_34() {
-    if (true) { jj_la = 0; jj_scanpos = jj_lastpos; return false;}
+    if (jj_3R_20()) return true;
     return false;
   }
 
   private boolean jj_3R_22() {
-    if (jj_3R_27()) return true;
+    if (jj_3R_28()) return true;
     return false;
   }
 
-  private boolean jj_3R_21() {
-    if (jj_3R_26()) return true;
+  private boolean jj_3R_86() {
+    if (jj_scan_token(COMMA)) return true;
+    if (jj_3R_20()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_23() {
+    if (jj_scan_token(LBRACE)) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_69()) { jj_scanpos = xsp; break; }
+    }
+    xsp = jj_scanpos;
+    if (jj_3R_70()) jj_scanpos = xsp;
+    if (jj_scan_token(RBRACE)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_27() {
+    if (jj_3R_31()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_84() {
+    if (jj_scan_token(LBRACKET)) return true;
+    if (jj_3R_30()) return true;
+    if (jj_scan_token(RBRACKET)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_40() {
+    if (jj_scan_token(PRINT)) return true;
+    if (jj_scan_token(LPAREN)) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_47()) {
+    jj_scanpos = xsp;
+    if (jj_3R_48()) return true;
+    }
+    if (jj_scan_token(RPAREN)) return true;
+    xsp = jj_scanpos;
+    if (jj_scan_token(26)) {
+    jj_scanpos = xsp;
+    if (jj_3R_49()) return true;
+    }
+    return false;
+  }
+
+  private boolean jj_3R_28() {
+    if (jj_3R_32()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_33()) { jj_scanpos = xsp; break; }
+    }
+    if (jj_scan_token(Ident)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_37() {
+    if (jj_3R_42()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_36() {
+    if (jj_3R_41()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_35() {
+    if (jj_3R_40()) return true;
     return false;
   }
 
@@ -1258,48 +1506,84 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
+  private boolean jj_3R_34() {
+    if (jj_3R_39()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_21() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(33)) {
+    jj_scanpos = xsp;
+    if (jj_3R_27()) return true;
+    }
+    return false;
+  }
+
   private boolean jj_3_2() {
     if (jj_3R_17()) return true;
     return false;
   }
 
-  private boolean jj_3R_20() {
-    if (jj_3R_25()) return true;
+  private boolean jj_3R_29() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3_2()) {
+    jj_scanpos = xsp;
+    if (jj_3R_34()) {
+    jj_scanpos = xsp;
+    if (jj_3_3()) {
+    jj_scanpos = xsp;
+    if (jj_3R_35()) {
+    jj_scanpos = xsp;
+    if (jj_3R_36()) {
+    jj_scanpos = xsp;
+    if (jj_3R_37()) return true;
+    }
+    }
+    }
+    }
+    }
     return false;
   }
 
   private boolean jj_3R_16() {
+    if (jj_3R_21()) return true;
+    if (jj_scan_token(Ident)) return true;
+    if (jj_scan_token(LPAREN)) return true;
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_20()) {
-    jj_scanpos = xsp;
-    if (jj_3_2()) {
-    jj_scanpos = xsp;
-    if (jj_3_3()) {
-    jj_scanpos = xsp;
-    if (jj_3R_21()) {
-    jj_scanpos = xsp;
-    if (jj_3R_22()) return true;
-    }
-    }
-    }
-    }
+    if (jj_3R_22()) jj_scanpos = xsp;
+    if (jj_scan_token(RPAREN)) return true;
+    if (jj_3R_23()) return true;
     return false;
   }
 
-  private boolean jj_3R_66() {
+  private boolean jj_3R_45() {
+    if (jj_scan_token(ASSIGN)) return true;
+    if (jj_3R_20()) return true;
+    return false;
+  }
+
+  private boolean jj_3_1() {
+    if (jj_3R_16()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_79() {
     if (jj_scan_token(LPAREN)) return true;
-    if (jj_3R_38()) return true;
+    if (jj_3R_30()) return true;
     if (jj_scan_token(RPAREN)) return true;
     return false;
   }
 
-  private boolean jj_3R_65() {
+  private boolean jj_3R_78() {
     if (jj_scan_token(Ident)) return true;
     return false;
   }
 
-  private boolean jj_3R_64() {
+  private boolean jj_3R_77() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(34)) {
@@ -1309,78 +1593,33 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
-  private boolean jj_3R_63() {
+  private boolean jj_3R_26() {
+    if (jj_3R_30()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_76() {
     if (jj_scan_token(STRING_LITERAL)) return true;
     return false;
   }
 
-  private boolean jj_3R_62() {
+  private boolean jj_3R_75() {
     if (jj_scan_token(CHAR_LTIERAL)) return true;
     return false;
   }
 
-  private boolean jj_3R_71() {
-    if (jj_3R_24()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_61() {
-    if (jj_scan_token(DOUBLE_LITERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_60() {
-    if (jj_scan_token(INTEGER_LITERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_30() {
-    if (jj_3R_38()) return true;
-    return false;
-  }
-
-  private boolean jj_3_1() {
-    if (jj_3R_16()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_58() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_60()) {
-    jj_scanpos = xsp;
-    if (jj_3R_61()) {
-    jj_scanpos = xsp;
-    if (jj_3R_62()) {
-    jj_scanpos = xsp;
-    if (jj_3R_63()) {
-    jj_scanpos = xsp;
-    if (jj_3R_64()) {
-    jj_scanpos = xsp;
-    if (jj_3R_65()) {
-    jj_scanpos = xsp;
-    if (jj_3R_66()) return true;
-    }
-    }
-    }
-    }
-    }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_37() {
-    if (jj_3R_24()) return true;
+  private boolean jj_3R_85() {
+    if (jj_3R_20()) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_45()) { jj_scanpos = xsp; break; }
+      if (jj_3R_86()) { jj_scanpos = xsp; break; }
     }
     return false;
   }
 
-  private boolean jj_3R_70() {
-    if (jj_3R_38()) return true;
+  private boolean jj_3R_74() {
+    if (jj_scan_token(DOUBLE_LITERAL)) return true;
     return false;
   }
 
@@ -1389,49 +1628,115 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
-  private boolean jj_3R_59() {
-    if (jj_3R_67()) return true;
+  private boolean jj_3R_38() {
+    if (jj_3R_43()) return true;
     return false;
   }
 
-  private boolean jj_3R_69() {
-    if (jj_scan_token(LPAREN)) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_71()) jj_scanpos = xsp;
-    if (jj_scan_token(RPAREN)) return true;
+  private boolean jj_3R_73() {
+    if (jj_scan_token(INTEGER_LITERAL)) return true;
     return false;
   }
 
-  private boolean jj_3R_29() {
-    if (jj_scan_token(LBRACE)) return true;
+  private boolean jj_3R_71() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_37()) jj_scanpos = xsp;
-    if (jj_scan_token(RBRACE)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_68() {
-    if (jj_scan_token(LBRACKET)) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_70()) jj_scanpos = xsp;
-    if (jj_scan_token(RBRACKET)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_67() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_68()) {
+    if (jj_3R_73()) {
     jj_scanpos = xsp;
-    if (jj_3R_69()) return true;
+    if (jj_3R_74()) {
+    jj_scanpos = xsp;
+    if (jj_3R_75()) {
+    jj_scanpos = xsp;
+    if (jj_3R_76()) {
+    jj_scanpos = xsp;
+    if (jj_3R_77()) {
+    jj_scanpos = xsp;
+    if (jj_3R_78()) {
+    jj_scanpos = xsp;
+    if (jj_3R_79()) return true;
+    }
+    }
+    }
+    }
+    }
     }
     return false;
   }
 
-  private boolean jj_3R_55() {
+  private boolean jj_3R_83() {
+    if (jj_3R_30()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_72() {
+    if (jj_3R_80()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_25() {
+    if (jj_scan_token(LBRACE)) return true;
+    if (jj_3R_20()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_54()) { jj_scanpos = xsp; break; }
+    }
+    if (jj_scan_token(RBRACE)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_50() {
+    if (jj_scan_token(ELSE)) return true;
+    if (jj_3R_17()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_82() {
+    if (jj_scan_token(LPAREN)) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_85()) jj_scanpos = xsp;
+    if (jj_scan_token(RPAREN)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_81() {
+    if (jj_scan_token(LBRACKET)) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_83()) jj_scanpos = xsp;
+    if (jj_scan_token(RBRACKET)) return true;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_84()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_80() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_81()) {
+    jj_scanpos = xsp;
+    if (jj_3R_82()) return true;
+    }
+    return false;
+  }
+
+  private boolean jj_3R_20() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_25()) {
+    jj_scanpos = xsp;
+    if (jj_3_4()) {
+    jj_scanpos = xsp;
+    if (jj_3R_26()) return true;
+    }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_66() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(6)) {
@@ -1441,48 +1746,41 @@ public class NawkParser implements NawkParserConstants {
     if (jj_scan_token(8)) return true;
     }
     }
-    if (jj_3R_54()) return true;
+    if (jj_3R_65()) return true;
     return false;
   }
 
-  private boolean jj_3R_24() {
+  private boolean jj_3R_44() {
+    if (jj_scan_token(LBRACKET)) return true;
+    if (jj_scan_token(RBRACKET)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_63() {
+    if (jj_3R_23()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_68() {
+    if (jj_3R_71()) return true;
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_29()) {
-    jj_scanpos = xsp;
-    if (jj_3_4()) {
-    jj_scanpos = xsp;
-    if (jj_3R_30()) return true;
-    }
-    }
+    if (jj_3R_72()) jj_scanpos = xsp;
     return false;
   }
 
-  private boolean jj_3R_40() {
-    if (jj_scan_token(ASSIGN)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_57() {
-    if (jj_3R_58()) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_59()) jj_scanpos = xsp;
-    return false;
-  }
-
-  private boolean jj_3R_53() {
+  private boolean jj_3R_64() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(2)) {
     jj_scanpos = xsp;
     if (jj_scan_token(4)) return true;
     }
-    if (jj_3R_52()) return true;
+    if (jj_3R_62()) return true;
     return false;
   }
 
-  private boolean jj_3R_56() {
+  private boolean jj_3R_67() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(2)) {
@@ -1501,29 +1799,38 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
-  private boolean jj_3R_54() {
+  private boolean jj_3R_65() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_56()) jj_scanpos = xsp;
-    if (jj_3R_57()) return true;
+    if (jj_3R_67()) jj_scanpos = xsp;
+    if (jj_3R_68()) return true;
     return false;
   }
 
-  private boolean jj_3R_33() {
+  private boolean jj_3R_49() {
+    if (true) { jj_la = 0; jj_scanpos = jj_lastpos; return false;}
+    return false;
+  }
+
+  private boolean jj_3R_39() {
+    if (jj_3R_31()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_44()) { jj_scanpos = xsp; break; }
+    }
     if (jj_scan_token(Ident)) return true;
-    Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_40()) jj_scanpos = xsp;
+    if (jj_3R_45()) jj_scanpos = xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(26)) {
+    jj_scanpos = xsp;
+    if (jj_3R_46()) return true;
+    }
     return false;
   }
 
-  private boolean jj_3R_32() {
-    if (jj_scan_token(LBRACKET)) return true;
-    if (jj_scan_token(RBRACKET)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_51() {
+  private boolean jj_3R_61() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(13)) {
@@ -1536,64 +1843,21 @@ public class NawkParser implements NawkParserConstants {
     }
     }
     }
-    if (jj_3R_50()) return true;
+    if (jj_3R_59()) return true;
     return false;
   }
 
-  private boolean jj_3R_52() {
-    if (jj_3R_54()) return true;
+  private boolean jj_3R_62() {
+    if (jj_3R_65()) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_55()) { jj_scanpos = xsp; break; }
+      if (jj_3R_66()) { jj_scanpos = xsp; break; }
     }
     return false;
   }
 
-  private boolean jj_3R_49() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(14)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(17)) return true;
-    }
-    if (jj_3R_48()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_25() {
-    if (jj_3R_31()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_32()) { jj_scanpos = xsp; break; }
-    }
-    if (jj_3R_33()) return true;
-    xsp = jj_scanpos;
-    if (jj_scan_token(26)) {
-    jj_scanpos = xsp;
-    if (jj_3R_34()) return true;
-    }
-    return false;
-  }
-
-  private boolean jj_3R_50() {
-    if (jj_3R_52()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_53()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_47() {
-    if (jj_scan_token(AND)) return true;
-    if (jj_3R_46()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_39() {
+  private boolean jj_3R_32() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(31)) {
@@ -1612,52 +1876,127 @@ public class NawkParser implements NawkParserConstants {
     return false;
   }
 
-  private boolean jj_3R_44() {
-    if (jj_scan_token(OR)) return true;
-    if (jj_3R_43()) return true;
+  private boolean jj_3R_58() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(14)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(17)) return true;
+    }
+    if (jj_3R_56()) return true;
     return false;
   }
 
   private boolean jj_3R_31() {
-    if (jj_3R_39()) return true;
+    if (jj_3R_32()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_59() {
+    if (jj_3R_62()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_64()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_55() {
+    if (jj_scan_token(AND)) return true;
+    if (jj_3R_53()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_52() {
+    if (jj_scan_token(OR)) return true;
+    if (jj_3R_51()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_56() {
+    if (jj_3R_59()) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_61()) jj_scanpos = xsp;
+    return false;
+  }
+
+  private boolean jj_3R_57() {
+    if (jj_3R_60()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_60() {
+    if (jj_scan_token(DDOT)) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(11)) jj_scanpos = xsp;
+    if (jj_scan_token(STRING_LITERAL)) return true;
+    if (jj_scan_token(DDOT)) return true;
+    xsp = jj_scanpos;
+    if (jj_3R_63()) jj_scanpos = xsp;
     return false;
   }
 
   private boolean jj_3R_48() {
-    if (jj_3R_50()) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_51()) jj_scanpos = xsp;
+    if (true) { jj_la = 0; jj_scanpos = jj_lastpos; return false;}
     return false;
   }
 
-  private boolean jj_3R_46() {
-    if (jj_3R_48()) return true;
+  private boolean jj_3R_70() {
+    if (jj_scan_token(RETURN)) return true;
+    if (jj_3R_30()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_53() {
+    if (jj_3R_56()) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_49()) { jj_scanpos = xsp; break; }
+      if (jj_3R_58()) { jj_scanpos = xsp; break; }
     }
     return false;
   }
 
   private boolean jj_3R_42() {
-    if (jj_scan_token(ASSIGN)) return true;
-    if (jj_3R_38()) return true;
+    if (jj_scan_token(IF)) return true;
+    if (jj_scan_token(LPAREN)) return true;
+    if (jj_3R_43()) return true;
+    if (jj_scan_token(RPAREN)) return true;
+    if (jj_3R_17()) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_50()) jj_scanpos = xsp;
     return false;
   }
 
-  private boolean jj_3R_36() {
-    if (true) { jj_la = 0; jj_scanpos = jj_lastpos; return false;}
+  private boolean jj_3R_51() {
+    if (jj_3R_53()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_55()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_41() {
+    if (jj_scan_token(WHILE)) return true;
+    if (jj_scan_token(LPAREN)) return true;
+    if (jj_3R_43()) return true;
+    if (jj_scan_token(RPAREN)) return true;
+    if (jj_3R_17()) return true;
     return false;
   }
 
   private boolean jj_3R_43() {
-    if (jj_3R_46()) return true;
+    if (jj_3R_51()) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_47()) { jj_scanpos = xsp; break; }
+      if (jj_3R_52()) { jj_scanpos = xsp; break; }
     }
     return false;
   }
@@ -1666,40 +2005,66 @@ public class NawkParser implements NawkParserConstants {
     if (jj_scan_token(STRING_LITERAL)) return true;
     if (jj_scan_token(AT)) return true;
     if (jj_scan_token(LBRACE)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_41() {
-    if (jj_3R_43()) return true;
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_44()) { jj_scanpos = xsp; break; }
+      if (jj_3R_57()) { jj_scanpos = xsp; break; }
     }
+    if (jj_scan_token(RBRACE)) return true;
     return false;
   }
 
-  private boolean jj_3R_27() {
-    if (jj_scan_token(SEMICOLON)) return true;
+  private boolean jj_3R_46() {
+    if (true) { jj_la = 0; jj_scanpos = jj_lastpos; return false;}
+    return false;
+  }
+
+  private boolean jj_3R_24() {
+    if (jj_3R_29()) return true;
+    return false;
+  }
+
+  private boolean jj_3_5() {
+    if (jj_scan_token(Ident)) return true;
+    if (jj_scan_token(ASSIGN)) return true;
+    if (jj_3R_20()) return true;
     return false;
   }
 
   private boolean jj_3R_18() {
-    if (jj_3R_24()) return true;
+    if (jj_3R_20()) return true;
     if (jj_scan_token(SEMICOLON)) return true;
     return false;
   }
 
-  private boolean jj_3R_38() {
-    if (jj_3R_41()) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_42()) jj_scanpos = xsp;
+  private boolean jj_3R_47() {
+    if (jj_3R_20()) return true;
     return false;
   }
 
-  private boolean jj_3R_28() {
-    if (jj_3R_16()) return true;
+  private boolean jj_3R_30() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3_5()) {
+    jj_scanpos = xsp;
+    if (jj_3R_38()) return true;
+    }
+    return false;
+  }
+
+  private boolean jj_3R_17() {
+    if (jj_scan_token(LBRACE)) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_24()) { jj_scanpos = xsp; break; }
+    }
+    if (jj_scan_token(RBRACE)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_69() {
+    if (jj_3R_29()) return true;
     return false;
   }
 
@@ -1722,12 +2087,12 @@ public class NawkParser implements NawkParserConstants {
       jj_la1_init_1();
    }
    private static void jj_la1_init_0() {
-      jj_la1_0 = new int[] {0xf450083c,0xf0000000,0xf0000000,0x4000000,0x50083c,0x4000000,0xf450083c,0x0,0x800,0x400000,0xf0000000,0x1000000,0x4000000,0x400,0x8000000,0x50083c,0x400000,0x10083c,0x8000000,0xf0000000,0xf0000000,0x1000000,0xf450083c,0x0,0x400,0x40000,0x80000,0x24000,0x24000,0x1b000,0x1b000,0x14,0x14,0x1c0,0x1c0,0x83c,0x83c,0x1100000,0x10083c,0x1000000,0x8000000,0x50083c,0x1100000,0x0,0x100000,};
+      jj_la1_0 = new int[] {0xf050083c,0xf050083c,0xf0000000,0x0,0x50083c,0x4000000,0xf050083c,0x0,0x0,0x800,0x400000,0xf0000000,0x1000000,0x400,0x4000000,0x8000000,0x400000,0x10083c,0x8000000,0xf0000000,0xf0000000,0x1000000,0xf050083c,0x0,0x10083c,0x40000,0x80000,0x24000,0x24000,0x1b000,0x1b000,0x14,0x14,0x1c0,0x1c0,0x83c,0x83c,0x1100000,0x10083c,0x1000000,0x8000000,0x50083c,0x1100000,0x0,0x100000,};
    }
    private static void jj_la1_init_1() {
-      jj_la1_1 = new int[] {0x1f8f,0x3,0x1,0x80,0x1f0c,0x0,0x1f8d,0x40,0x0,0x0,0x1,0x0,0x0,0x0,0x0,0x1f0c,0x0,0x1f0c,0x0,0x1,0x3,0x0,0x1f8d,0x10,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1f0c,0x0,0x0,0x1f0c,0x0,0xc,0x1f0c,};
+      jj_la1_1 = new int[] {0xfb8f,0xfb8d,0x1,0x380,0xf80c,0x0,0xfb8d,0x40,0x400,0x0,0x0,0x1,0x0,0x0,0x0,0x0,0x0,0xf80c,0x0,0x1,0x3,0x0,0xfb8d,0x10,0xf80c,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xf80c,0x0,0x0,0xf80c,0x0,0xc,0xf80c,};
    }
-  final private JJCalls[] jj_2_rtns = new JJCalls[4];
+  final private JJCalls[] jj_2_rtns = new JJCalls[5];
   private boolean jj_rescan = false;
   private int jj_gc = 0;
 
@@ -1820,6 +2185,7 @@ public class NawkParser implements NawkParserConstants {
           }
         }
       }
+      trace_token(token, "");
       return token;
     }
     token = oldToken;
@@ -1857,6 +2223,7 @@ public class NawkParser implements NawkParserConstants {
     else token = token.next = token_source.getNextToken();
     jj_ntk = -1;
     jj_gen++;
+      trace_token(token, " (in getNextToken)");
     return token;
   }
 
@@ -1914,7 +2281,7 @@ public class NawkParser implements NawkParserConstants {
   /** Generate ParseException. */
   public ParseException generateParseException() {
     jj_expentries.clear();
-    boolean[] la1tokens = new boolean[48];
+    boolean[] la1tokens = new boolean[51];
     if (jj_kind >= 0) {
       la1tokens[jj_kind] = true;
       jj_kind = -1;
@@ -1931,7 +2298,7 @@ public class NawkParser implements NawkParserConstants {
         }
       }
     }
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < 51; i++) {
       if (la1tokens[i]) {
         jj_expentry = new int[1];
         jj_expentry[0] = i;
@@ -1948,17 +2315,60 @@ public class NawkParser implements NawkParserConstants {
     return new ParseException(token, exptokseq, tokenImage);
   }
 
-  /** Enable tracing. */
+  private int trace_indent = 0;
+  private boolean trace_enabled = true;
+
+/** Enable tracing. */
   final public void enable_tracing() {
+    trace_enabled = true;
   }
 
-  /** Disable tracing. */
+/** Disable tracing. */
   final public void disable_tracing() {
+    trace_enabled = false;
+  }
+
+  private void trace_call(String s) {
+    if (trace_enabled) {
+      for (int i = 0; i < trace_indent; i++) { System.out.print(" "); }
+      System.out.println("Call:   " + s);
+    }
+    trace_indent = trace_indent + 2;
+  }
+
+  private void trace_return(String s) {
+    trace_indent = trace_indent - 2;
+    if (trace_enabled) {
+      for (int i = 0; i < trace_indent; i++) { System.out.print(" "); }
+      System.out.println("Return: " + s);
+    }
+  }
+
+  private void trace_token(Token t, String where) {
+    if (trace_enabled) {
+      for (int i = 0; i < trace_indent; i++) { System.out.print(" "); }
+      System.out.print("Consumed token: <" + tokenImage[t.kind]);
+      if (t.kind != 0 && !tokenImage[t.kind].equals("\"" + t.image + "\"")) {
+        System.out.print(": \"" + t.image + "\"");
+      }
+      System.out.println(" at line " + t.beginLine + " column " + t.beginColumn + ">" + where);
+    }
+  }
+
+  private void trace_scan(Token t1, int t2) {
+    if (trace_enabled) {
+      for (int i = 0; i < trace_indent; i++) { System.out.print(" "); }
+      System.out.print("Visited token: <" + tokenImage[t1.kind]);
+      if (t1.kind != 0 && !tokenImage[t1.kind].equals("\"" + t1.image + "\"")) {
+        System.out.print(": \"" + t1.image + "\"");
+      }
+      System.out.println(" at line " + t1.beginLine + " column " + t1.beginColumn + ">; Expected token: <" + tokenImage[t2] + ">");
+    }
   }
 
   private void jj_rescan_token() {
     jj_rescan = true;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
     try {
       JJCalls p = jj_2_rtns[i];
       do {
@@ -1969,6 +2379,7 @@ public class NawkParser implements NawkParserConstants {
             case 1: jj_3_2(); break;
             case 2: jj_3_3(); break;
             case 3: jj_3_4(); break;
+            case 4: jj_3_5(); break;
           }
         }
         p = p.next;

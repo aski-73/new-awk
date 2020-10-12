@@ -15,8 +15,8 @@ public class AstExprConditionalAnd extends AstExpr {
     AstExpr left;
     AstExpr right;
 
-    public AstExprConditionalAnd(AstExpr left, AstExpr right, Token op, Type baseType) {
-        super(left.start, right.end, baseType);
+    public AstExprConditionalAnd(AstExpr left, AstExpr right, Token op) {
+        super(left.start, right.end);
         this.left = left;
         this.right = right;
         this.op = op;
@@ -29,9 +29,6 @@ public class AstExprConditionalAnd extends AstExpr {
         Value left = this.left.run();
         Value right = this.right.run();
 
-        // "OR" expr has always a boolean type after running
-        type = Type.BOOLEAN;
-
         return new ValueBoolean((Boolean) left.value && (Boolean) right.value);
     }
 
@@ -39,7 +36,8 @@ public class AstExprConditionalAnd extends AstExpr {
     public void checkSemantic(List<CompilerError> errors) {
         left.checkSemantic(errors);
         right.checkSemantic(errors);
-        type = Helper.determineTypeBase(left.type, right.type);
+
+        type = Helper.validateTypesForConditionalOp(left.type, right.type, op);
 
         if (type == Type.ERROR) {
             errors.add(new SemanticError(String.format("bad operand types for binary operator '%s'", op.image), start, end));

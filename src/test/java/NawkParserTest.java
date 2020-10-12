@@ -94,7 +94,7 @@ public class NawkParserTest {
         AstRoot root = testSubject.start();
         root.checkSemantic(errors);
         List<AstNode> nodes = root.subtrees;
-        Assertions.assertThat(nodes.size()).isEqualTo(12);
+        Assertions.assertThat(nodes.size()).isEqualTo(13);
         Assertions.assertThat(nodes.get(0).run().value).isEqualTo(8);
         Assertions.assertThat(nodes.get(1).run().value).isEqualTo(2);
         Assertions.assertThat(nodes.get(3).run().value).isEqualTo(true);
@@ -145,6 +145,7 @@ public class NawkParserTest {
         LinkedList<CompilerError> errors = new LinkedList<>();
         AstRoot root = testSubject.start();
         root.checkSemantic(errors);
+        Assertions.assertThat(errors.size()).isEqualTo(5);
     }
 
     @Test
@@ -164,5 +165,28 @@ public class NawkParserTest {
         if (testSubject.globalErrors.size() > 0) {
             System.out.println("Program can not be executed. Check out errors");
         }
+    }
+
+    @Test
+    public void testWhileStatement() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("11_while_test.nawk"));
+        LinkedList<CompilerError> errors = new LinkedList<>();
+        AstRoot root = testSubject.start();
+        root.checkSemantic(errors);
+        root.run();
+    }
+
+    @Test
+    public void test() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("testfile_.nawk"));
+        LinkedList<CompilerError> errors = new LinkedList<>();
+        AstRoot root = testSubject.start();
+        root.checkSemantic(errors);
+        root.run();
+    }
+
+    @Test
+    public void testMain() throws ParseException {
+        NawkParser.main(null);
     }
 }

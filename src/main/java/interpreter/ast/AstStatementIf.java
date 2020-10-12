@@ -2,6 +2,7 @@ package interpreter.ast;
 
 import interpreter.Token;
 import interpreter.errors.CompilerError;
+import interpreter.errors.SemanticError;
 
 import java.util.List;
 
@@ -38,6 +39,8 @@ public class AstStatementIf extends AstStatement {
 
     @Override
     public void checkSemantic(List<CompilerError> errors) {
-
+        if (condition.type != Type.BOOLEAN) {
+            errors.add(new SemanticError("invalid condition type for if statement."));
+        }
     }
 }

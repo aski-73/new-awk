@@ -1,6 +1,6 @@
 options {
     STATIC = false;
-//    DEBUG_PARSER = true;
+    DEBUG_PARSER = true;
 //    DEBUG_LOOKAHEAD = true;
 }
 
@@ -13,7 +13,8 @@ public class NawkParser {
     public static void main(String[] args) {
         try {
           if (args.length == 0) {
-            interpreter.NawkParser parser = new NawkParser(NawkParser.class.getResourceAsStream("myawk.nawk"));
+            System.out.println("Running with default file ...");
+            interpreter.NawkParser parser = new NawkParser(NawkParser.class.getClassLoader().getResourceAsStream("testfile_.nawk"));
               AstRoot root = parser.start();
               root.checkSemantic(parser.globalErrors);
               if (parser.globalErrors.size() > 0)
@@ -21,13 +22,21 @@ public class NawkParser {
               else
                   root.run();
           } else {
+              System.out.println("Running with arguments...");
             for (String arg: args) {
                 File testFile = new File(arg);
+                System.out.println("Reading in öpöpöFile....");
                 NawkParser parser = new NawkParser(new FileReader(testFile));
                 AstRoot root = parser.start();
-                root.checkSemantic(parser.globalErrors);
-                if (parser.globalErrors.size() > 0)
+                LinkedList<CompilerError> errors = new LinkedList<CompilerError>();
+
+                root.checkSemantic(errors);
+                if (errors.size() > 0) {
                     System.out.println("Can not run program. Check out errors.");
+                    for (CompilerError err : parser.globalErrors){
+                        System.out.println(err.toString());
+                    }
+                }
                 else
                     root.run();
             }
@@ -86,6 +95,9 @@ TOKEN : {
     | <DOT: ".">
     | <DDOT: ":">
     | <PRINT: "print">
+    | <WHILE: "while">
+    | <IF: "if">
+    | <ELSE: "else">
     // LITERALS (Values)
     | <INTEGER_LITERAL : "0" | ["1" - "9"] (["0" - "9"])*>
     | <DOUBLE_LITERAL : <INTEGER_LITERAL> "." (["0" - "9"])*>
@@ -119,7 +131,7 @@ AstRoot prog(Set<Integer> syncChars) : {
     AstNode a;
 } {
     // Needs Lookahead so that a variableDeclaration and functionDeclaration can be differentiated
-    ( LOOKAHEAD(3) a = statement(globalSt) { subtrees.add(a); } | a = functionDeclaration() { subtrees.add(a); globalSt.add(((AstFunctionDeclaration)a).identifier.image, (AstVariable) a); })* {
+    ( LOOKAHEAD(5) a = functionDeclaration() { subtrees.add(a); globalSt.add(((AstFunctionDeclaration)a).identifier.image, (AstVariable) a); } | a = statement(globalSt) { subtrees.add(a); } )* {
         if (subtrees.size() > 0)
             root = new AstRoot(subtrees.get(0).start, subtrees.get(subtrees.size() - 1).end, subtrees, globalSt);
         else
@@ -134,20 +146,17 @@ AstRoot prog(Set<Integer> syncChars) : {
 AstStatement statement(SymbolTable st) : {
     AstStatement stmt;
 } {
-try {
-    (stmt = variableDeclaration(st)
+    (
     // LOOKAHEAD so  that a blockStatement and an array definition can be differentiated
-    | LOOKAHEAD(3) stmt = blockStatement(st)
+    LOOKAHEAD(10) stmt = blockStatement(st)
+    | stmt = variableDeclaration(st)
     // Lookahead 2 so that a exprStatement (=>String literal) and stringOpStatement can be differentiated
     | LOOKAHEAD(2) stmt = exprStatement(st)
     | stmt = printStatement(st)
-    | stmt = emptyStatement()) {
+    | stmt = whileStatement(st)
+    | stmt = ifStatement(st)) {
         return stmt;
     }
-} catch (ParseException e) {
-
-    return new AstStatementNone();
-}
 }
 
 AstStatement printStatement(SymbolTable st) : {
@@ -170,29 +179,18 @@ try {
 
 AstStatement blockStatement(SymbolTable parentSt) : {
     SymbolTable st = new SymbolTable(parentSt);
-    List<AstStatement> list;
-    Token t1, t2;
-} {
-    t1 = "{" list = blockStatementContent(st) t2 = "}" { return new AstStatementBlock(t1, t2, list); }
-}
-
-// Workaround, da (..)* in blockStatement nicht stehen kann, ohne dass
-// javecc unreachable code erzeugt
-List<AstStatement> blockStatementContent(SymbolTable st) : {
     List<AstStatement> list = new LinkedList<AstStatement>();
+    Token t1, t2;
     AstStatement a;
 } {
-    ( a = statement(st) { list.add(a); } )* { return list; }
+    t1 = "{" ( a = statement(st) { list.add(a); } )* t2 = "}" { return new AstStatementBlock(t1, t2, list); }
 }
+
 
 AstExpr exprStatement(SymbolTable st) : {
     AstExpr e;
 } {
     e = arrayAndVariableInitializer(st) ";" {return e;}
-}
-AstStatementEmpty emptyStatement() : {
-} {
-    ";" {return new AstStatementEmpty();}
 }
 
 AstExprStringOp stringOpExpr() : {
@@ -203,6 +201,25 @@ AstExprStringOp stringOpExpr() : {
     t1 = <STRING_LITERAL><AT>"{" ( a = stringOpEasyRegexExpr() { list.add(a); } )* t2 = "}" {
     return new AstExprStringOp(t1, t2, t1.image, list);
 }
+}
+
+AstStatementWhile whileStatement(SymbolTable st) : {
+   AstExpr expr;
+   AstStatement stm;
+   Token start;
+} {
+  start = "while" "(" expr = conditionalOrExpression(st) ")" stm = blockStatement(st) { return new AstStatementWhile(start, expr, stm, st); }
+}
+
+AstStatementIf ifStatement(SymbolTable st) : {
+    Token start;
+    AstExpr expr;
+   AstStatement option1, option2 = null;
+} {
+    start = "if" "(" expr = conditionalOrExpression(st) ")" option1 = blockStatement(st) ["else" option2 = blockStatement(st) ]
+    {
+        return new AstStatementIf(start, expr, option1, option2);
+    }
 }
 
 AstEasyRegex stringOpEasyRegexExpr() : {
@@ -251,35 +268,20 @@ Token primitiveType() : {
 
 AstStatementVariableDeclaration variableDeclaration(SymbolTable st) : {
     Token type, end = null;
-    AstVariable var = null;
+    AstExpr val = null;
     int dimensions = 0;
+    Token id;
     Set<Integer> syncChars = new HashSet<Integer>();
     syncChars.add(NawkParserConstants.RETURN);
 } {
 try {
-    type = type() ("[" "]" { dimensions++; })* var = variableDeclarator(st) (end = ";" | missingSemicolon(type)) {
-        var.start = type;
-        var.dimensions = dimensions;
-        return new AstStatementVariableDeclaration(type, var.end, type, var, dimensions, st);
+    type = type() ("[" "]" { dimensions++; })* id = <Ident> [ "=" val = arrayAndVariableInitializer(st)] (end = ";" | missingSemicolon(type)) {
+        return new AstStatementVariableDeclaration(type, end, type, id, val, dimensions, st);
     }
 } catch (ParseException e) {
     skipUntil(syncChars);
-    return new AstStatementVariableDeclaration(null, null, null, null, dimensions, st);
+    return new AstStatementVariableDeclaration(null, null, null, null, val, dimensions, st);
 }
-}
-
-AstVariable variableDeclarator(SymbolTable st) : {
-    AstExpr val = null;
-    AstVariable var;
-    Token id;
-} {
-     id = <Ident> [ "=" val = arrayAndVariableInitializer(st) ] {
-        // type is at this point not known, therefore set it to null (must be set later)
-        var = new AstVariable(null, id, id);
-        var.symbolTable = st;
-        var.value = val;
-        return var;
-    }
 }
 
 /**
@@ -299,9 +301,9 @@ AstExpr arrayAndVariableInitializer(SymbolTable st) : {
 try {
 
     // single & multi dim
-    (t1 = "{" [ e1 = arrayAndVariableInitializer(st) { elements.add(e1); } (t3 = "," e2 = arrayAndVariableInitializer(st) {
+    (t1 = "{" e1 = arrayAndVariableInitializer(st) { elements.add(e1); } (t3 = "," e2 = arrayAndVariableInitializer(st) {
         elements.add(e2);
-    } )* ] t2 = "}" {
+    } )* t2 = "}" {
         val = new AstExprArrayInit(t1, t2, Type.VOID, elements, new SymbolTable(st));
         if (e1 != null) {
             if (e1 instanceof AstExprArrayInit) // array of arrays
@@ -376,12 +378,10 @@ AstFunctionBlock functionBlock(SymbolTable st) : {
 AstExpr expr(SymbolTable st): {
     AstExpr left, right = null;
     Token op = null;
+    Token id;
+    AstExpr val;
  } {
-    // define variable assignment in expression rule, since expr can evaluate to an identifier
-    left = conditionalOrExpression(st) [<ASSIGN> right = expr(st) ] {
-        if (right != null) {
-            return new AstAssigment(left.start, right.end, left, right, st);
-        }
+    ( LOOKAHEAD(3) id = <Ident> "=" val = arrayAndVariableInitializer(st) { left = new AstAssigment(id, id, id, val, st); } | left = conditionalOrExpression(st)) {
         left.end = left.start;
         return left;
     }
@@ -392,8 +392,7 @@ AstExpr conditionalOrExpression(SymbolTable st) : {
      Token op = null;
  } {
     left = conditionalAndExpression(st) ( op = "||" right = conditionalAndExpression(st) {
-        Type baseType = Helper.validateTypesForConditionalOp(left, right, op);
-        AstExpr a =  new AstExprConditionalOr(left, right, op, baseType);
+        AstExpr a =  new AstExprConditionalOr(left, right, op);
         a.symbolTable = st;
     })* { return left; }
 }
@@ -403,8 +402,7 @@ AstExpr conditionalAndExpression(SymbolTable st) : {
      Token op = null;
  } {
     left = equalityExpression(st) (op = "&&" right = equalityExpression(st) {
-        Type baseType = Helper.validateTypesForConditionalOp(left, right, op);
-        AstExpr a = new AstExprConditionalAnd(left, right, op, baseType);
+        AstExpr a = new AstExprConditionalAnd(left, right, op);
         // left and right already have a symbol table. Got in equality expression
         a.symbolTable = st;
     })* { return left; }
@@ -415,8 +413,7 @@ AstExpr equalityExpression(SymbolTable st) : {
      Token op = null;
  } {
     left = relationalExpression(st) ( ( op = "==" | op = "!=" ) right = relationalExpression(st) {
-        Type typeBase = Helper.validateTypes(left, right, op);
-        left = new AstExprEquality(left, right, op, typeBase);
+        left = new AstExprEquality(left, right, op);
         left.symbolTable = st;
         right.symbolTable = st;
     } )* { return left; }
@@ -429,7 +426,7 @@ AstExpr relationalExpression(SymbolTable st) : {
     left = additiveExpression(st) [ ( op = "<" | op = ">" | op = "<=" | op = ">=" ) right = additiveExpression(st)  {
         // only allowed between numeric values
         Type typeBase = Helper.validateTypes(left, right, op);
-        left = new AstExprRelational(left, right, op, typeBase);
+        left = new AstExprRelational(left, right, op);
         left.symbolTable = st;
         right.symbolTable = st;
     } ] { return left; }

@@ -10,3 +10,4 @@ string s = "Hallo dies ist ein String äüö AÄÜÖ +_/% .;:???";
 string s2 = s + " Concatenation";
 double converted = toDouble("3.14");
 string implicitConversion = 3.14;
+int a = 5 + 5 * 2 + 3;

@@ -38,7 +38,6 @@ public class AstExprArrayCall extends AstExpr {
         // contains for each dimension an entry which points to the current index in the dimension
         AstExpr[] iValues = new AstExpr[indices.size()];
         // "i[k]" points to the current index in the iteration of dimension k [For Test: k is limited to 2]
-
         Token i = Token.newToken(NawkParserConstants.INTEGER, Type.INT.name());
         Token id2 = Token.newToken(NawkParserConstants.Ident, "i");
         AstExprArrayInit iArray = new AstExprArrayInit(start, end, Type.INT, null, symbolTable);
@@ -50,7 +49,7 @@ public class AstExprArrayCall extends AstExpr {
             symbolTable.add("i", iVar);
             // Special array call if the indices are boolean expressions
             if (indices.get(k) instanceof AstExprEquality) {
-                // special array call can only be used on array
+                // special array call can only be used on array. The case when resultN was over written in the else if
                 if (resultN instanceof AstExprArrayInit) {
                     AstExprEquality e = (AstExprEquality) indices.get(k);
                     for (int j = 0; j < ((AstExprArrayInit) resultN).elements.size(); j++) { // create in each iteration new pointer variables
@@ -59,11 +58,11 @@ public class AstExprArrayCall extends AstExpr {
                         symbolTable.removeValue("this");
 
                         // "this" points to the current element
-//                        Token t = Token.newToken(NawkParserConstants.anything, type.name());
-//                        Token id = Token.newToken(NawkParserConstants.Ident, "this");
-//                        AstVariable thisVar = new AstVariable(t, id, id);
-//                        thisVar.value = ((AstExprArrayInit) resultN).elements.get(j);
-//                        symbolTable.add("this", thisVar);
+                        Token t = Token.newToken(NawkParserConstants.anything, type.name());
+                        Token id = Token.newToken(NawkParserConstants.Ident, "this");
+                        AstVariable thisVar = new AstVariable(t, id, id);
+                        thisVar.value = ((AstExprArrayInit) resultN).elements.get(j);
+                        symbolTable.add("this", thisVar);
 
                         // if the user uses i[0] (k=0) the value will be in this iteration like the counter j;
                         iValues[k] = new ValueInteger(j);
@@ -76,9 +75,8 @@ public class AstExprArrayCall extends AstExpr {
                             result.add(((AstExprArrayInit) resultN).run(j));
                         }
                     }
+                    // result of bool-array-index-call is an array
                     resultN = new AstExprArrayInit(start, end, type, result, symbolTable);
-                } else {
-                    // TODO Exception "invalid index on array" or something like that
                 }
                 // remove i because its only needed in this scope
                 symbolTable.removeValue("i");

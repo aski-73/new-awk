@@ -52,7 +52,7 @@ public class AstExprFunctionCall extends AstExpr {
                     return new ValueBoolean(Boolean.parseBoolean(value));
                 case "isDouble":
                     return new ValueBoolean(isDouble(value));
-                case "isInt":
+                case "isInteger":
                     return new ValueBoolean(isInt(value));
                 case "isBoolean":
                     return new ValueBoolean(isBoolean(value));
@@ -131,6 +131,30 @@ public class AstExprFunctionCall extends AstExpr {
                     String msg = String.format("function '%s' is not declared or a function", i);
                     errors.add(new SemanticError(msg, start, end));
                 } else { // only for pre defined functions like toDouble etc.
+                    switch (i) {
+                        // toX Functions convert a string to type X
+                        // isX Function check if a string is of type x
+                        case "toDouble":
+                            type = Type.DOUBLE;
+                            break;
+                        case "len":
+                        case "toInteger":
+                            type = Type.INT;
+                            break;
+                        case "toChar":
+                            type = Type.CHAR;
+                            break;
+                        case "toBoolean":
+                        case "isDouble":
+                        case "isInteger":
+                        case "isBoolean":
+                        case "isChar":
+                            type = Type.BOOLEAN;
+                            break;
+                        default: // unknown
+                            type = Type.ERROR;
+                            break;
+                    }
                     // if declaration is null it is probably a predefined function. they only have 1 param
                     if (params.size() != 1)  {
                         String msg = String.format("invalid number of parameters for function '%s'", identifier);
@@ -140,6 +164,7 @@ public class AstExprFunctionCall extends AstExpr {
             }
 
             for (AstExpr param: params) {
+                param.checkSemantic(errors);
                 if (param.type == Type.VOID) {
                     String msg = String.format("invalid parameter type void of '%s' for function '%s'", param.toString(), identifier);
                     errors.add(new SemanticError(msg, start, end));

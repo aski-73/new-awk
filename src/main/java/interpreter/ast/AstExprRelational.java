@@ -15,8 +15,8 @@ public class AstExprRelational extends AstExpr {
     public AstExpr left;
     public AstExpr right;
 
-    public AstExprRelational(AstExpr left, AstExpr right, Token op, Type baseType) {
-        super(left.start, right.end, baseType);
+    public AstExprRelational(AstExpr left, AstExpr right, Token op) {
+        super(left.start, right.end);
         this.left = left;
         this.right = right;
         this.op = op;
@@ -52,10 +52,12 @@ public class AstExprRelational extends AstExpr {
     public void checkSemantic(List<CompilerError> errors) {
         left.checkSemantic(errors);
         right.checkSemantic(errors);
-        type = Helper.determineTypeBase(left.type, right.type);
-        if (type == Type.ERROR || type == Type.STRING || type == Type.BOOLEAN) {
+        Type baseType = Helper.determineTypeBase(left.type, right.type);
+        if (baseType == Type.ERROR) {
             errors.add(new SemanticError(String.format("bad operand types for binary operator '%s'", op.image), start, end));
         }
+
+        type = Type.BOOLEAN;
     }
 
     @Override

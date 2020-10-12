@@ -46,6 +46,9 @@ public class AstExprUnary extends AstExpr {
             default: // ! (bang, negation)
                 copy.unaryBang();
         }
+        if (expr instanceof AstExprPrimary && ((AstExprPrimary) expr).literal instanceof AstLiteralIdent)
+            symbolTable.find(((AstLiteralIdent) ((AstExprPrimary) expr).literal).identifier.image).value = copy;
+
         return copy;
     }
 
