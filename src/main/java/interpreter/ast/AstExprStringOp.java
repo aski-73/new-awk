@@ -66,11 +66,11 @@ public class AstExprStringOp extends AstExpr {
                     if (ar.astFunctionBlock != null) {
                         // assign matched token to "this" variable
                         Token type = Token.newToken(NawkParserConstants.STRING, "string");
-                        Token id = Token.newToken(NawkParserConstants.Ident, "this");
+                        Token id = Token.newToken(NawkParserConstants.Ident, "dis");
                         AstVariable thisVar = new AstVariable(type, id, id);
                         thisVar.value = new AstLiteralString(Token.newToken(NawkParserConstants.STRING, token));
-                        ar.astFunctionBlock.symbolTable.removeValue("this");
-                        ar.astFunctionBlock.symbolTable.add("this", thisVar);
+                        ar.astFunctionBlock.symbolTable.removeValue("dis");
+                        ar.astFunctionBlock.symbolTable.add("dis", thisVar);
 
                         // trigger semantic analysis because new value in symbol table
                         ar.astFunctionBlock.checkSemantic(Collections.emptyList());

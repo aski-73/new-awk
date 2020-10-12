@@ -28,7 +28,11 @@ public class AstLiteralString extends AstExpr {
 
     @Override
     public String toString() {
-        return start.image.substring(1, start.image.length() - 1);
+        // quotation marks)
+        if (start.image.startsWith("\""))
+            return start.image.substring(1, start.image.length() - 1);
+        else
+            return start.image;
     }
 
     @Override

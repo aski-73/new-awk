@@ -39,6 +39,11 @@ public class AstStatementIf extends AstStatement {
 
     @Override
     public void checkSemantic(List<CompilerError> errors) {
+        condition.checkSemantic(errors);
+        ifStatement.checkSemantic(errors);
+        if (elseStatement != null) {
+            elseStatement.checkSemantic(errors);
+        }
         if (condition.type != Type.BOOLEAN) {
             errors.add(new SemanticError("invalid condition type for if statement."));
         }

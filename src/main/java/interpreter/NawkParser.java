@@ -8,7 +8,7 @@ public class NawkParser implements NawkParserConstants {
         try {
           if (args.length == 0) {
             System.out.println("Running with default file ...");
-            interpreter.NawkParser parser = new NawkParser(NawkParser.class.getClassLoader().getResourceAsStream("testfile_.nawk"));
+            interpreter.NawkParser parser = new NawkParser(NawkParser.class.getClassLoader().getResourceAsStream("testfile_2.nawk"));
               AstRoot root = parser.start();
               root.checkSemantic(parser.globalErrors);
               if (parser.globalErrors.size() > 0)

@@ -177,6 +177,15 @@ public class NawkParserTest {
     }
 
     @Test
+    public void testIfStatement() throws ParseException {
+        testSubject = new NawkParser(this.getClass().getResourceAsStream("12_if_test.nawk"));
+        LinkedList<CompilerError> errors = new LinkedList<>();
+        AstRoot root = testSubject.start();
+        root.checkSemantic(errors);
+        root.run();
+    }
+
+    @Test
     public void test() throws ParseException {
         testSubject = new NawkParser(this.getClass().getResourceAsStream("testfile_.nawk"));
         LinkedList<CompilerError> errors = new LinkedList<>();
