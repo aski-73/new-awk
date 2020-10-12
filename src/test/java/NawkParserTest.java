@@ -187,6 +187,6 @@ public class NawkParserTest {
 
     @Test
     public void testMain() throws ParseException {
-        NawkParser.main(null);
+        NawkParser.main(new String[0]);
     }
 }

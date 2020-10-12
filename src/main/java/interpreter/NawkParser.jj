@@ -1,6 +1,6 @@
 options {
     STATIC = false;
-    DEBUG_PARSER = true;
+//    DEBUG_PARSER = true;
 //    DEBUG_LOOKAHEAD = true;
 }
 
@@ -25,7 +25,6 @@ public class NawkParser {
               System.out.println("Running with arguments...");
             for (String arg: args) {
                 File testFile = new File(arg);
-                System.out.println("Reading in öpöpöFile....");
                 NawkParser parser = new NawkParser(new FileReader(testFile));
                 AstRoot root = parser.start();
                 LinkedList<CompilerError> errors = new LinkedList<CompilerError>();

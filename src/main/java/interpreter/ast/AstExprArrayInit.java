@@ -28,7 +28,7 @@ public class AstExprArrayInit extends Value {
 
     public Value run(int index) {
         if (index >= elements.size() || index < 0)
-            throw new IndexOutOfBoundsException(String.format("you chose index '%s'. Your array has only '%s' elements.", index, elements.size()));
+            throw new IndexOutOfBoundsException(String.format("you chose index '%s'. Your array has only '%s' elements. '%s', '%s'", index, elements.size(), start.beginLine, end, end.beginLine));
 
         return elements.get(index).run();
     }

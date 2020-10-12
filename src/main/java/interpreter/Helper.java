@@ -14,6 +14,7 @@ public class Helper {
                 || functionName.equals("isChar")
                 || functionName.equals("isBoolean")
                 || functionName.equals("print")
+                || functionName.equals("this")
                 || functionName.equals("len");
     }
 

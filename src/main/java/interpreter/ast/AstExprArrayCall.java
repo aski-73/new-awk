@@ -80,6 +80,7 @@ public class AstExprArrayCall extends AstExpr {
                 }
                 // remove i because its only needed in this scope
                 symbolTable.removeValue("i");
+                symbolTable.removeValue("this");
             } else if (indices.get(k) instanceof AstExprUnary) { // "normal" index access via integer (nested in AstExprUnary)
                 if ((resultN instanceof AstExprArrayInit)) {
                     resultN = ((AstExprArrayInit) resultN).run((Integer) indices.get(k).run().value);
@@ -88,7 +89,6 @@ public class AstExprArrayCall extends AstExpr {
                 throw new RuntimeException(String.format("Invalid array index '%s'.", indices.get(k).toString()));
             }
         }
-
         return resultN.run();
     }
 

@@ -31,11 +31,13 @@ public class AstExprPrimary extends AstExpr {
 
     @Override
     public void checkSemantic(List<CompilerError> errors) {
-        if (suffix != null)
+        if (suffix != null) {
             suffix.checkSemantic(errors);
-        literal.checkSemantic(errors);
-
-        type = literal.type;
+            type = suffix.type;
+        } else {
+            literal.checkSemantic(errors);
+            type = literal.type;
+        }
     }
 
     @Override
